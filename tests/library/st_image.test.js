@@ -85,4 +85,25 @@ assert.equal(converted.bytes.length, 720 * 1024);
 assert.equal(image.toLibraryFile("a.prg", new Uint8Array([1])).name, "a.prg");
 assert.throws(function () { image.decodeMsa(new Uint8Array([1, 2, 3])); }, /Not an MSA/);
 assert.throws(function () { image.decodeMsa(new Uint8Array(msa.subarray(0, 100))); }, /truncated|Corrupt/);
+// Folders: "DIR/SUB/FILE" paths build a tree; a folder can span several clusters.
+const many = [];
+for (let i = 0; i < 40; i++) many.push({ name: "BIG/F" + i + ".TXT", data: new Uint8Array([i]) });
+const tree = image.createFloppy({ label: "TREE", files: many.concat([
+  { name: "GAME/DATA/LEVEL1.DAT", data: new Uint8Array(3000).fill(7) },
+  { name: "GAME/RUN.PRG", data: new Uint8Array([1, 2]) },
+  { name: "LONGNAME1.TXT", data: new Uint8Array([1]) },
+  { name: "LONGNAME2.TXT", data: new Uint8Array([2]) },
+]) });
+const treeReport = image.verify(tree);
+assert.equal(treeReport.valid, true, treeReport.errors.join("; "));
+assert.equal(treeReport.files.length, 40 + 4);
+assert.ok(treeReport.files.some(function (f) { return f.path === "GAME/DATA/LEVEL1.DAT" && f.size === 3000; }));
+const tv = image.openVolume(tree);
+const rootNames = tv.list(0).map(function (e) { return e.name + (e.isDir ? "/" : ""); }).sort();
+assert.deepEqual(rootNames, ["BIG/", "GAME/", "LONGNAME.TXT", "LONGNA~2.TXT"]);
+const game = tv.list(0).find(function (e) { return e.name === "GAME"; });
+const data = tv.list(game.cluster).find(function (e) { return e.name === "DATA"; });
+assert.deepEqual(Array.from(tv.read(tv.list(data.cluster)[0])), Array.from(new Uint8Array(3000).fill(7)));
+assert.equal(tv.list(tv.list(0).find(function (e) { return e.name === "BIG"; }).cluster).length, 40, "a folder spans two clusters");
+assert.throws(function () { image.createFloppy({ files: [{ name: "x", data: new Uint8Array(0) }, { name: "", data: new Uint8Array(0) }] }); }, /needs a name/);
 console.log("st_image.test.js passed");

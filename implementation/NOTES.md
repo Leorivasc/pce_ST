@@ -323,12 +323,12 @@ does and where its reference is:
 
 ## Next step (phase 2, after step 3)
 
-Done since step 3: snapshot UI and physical gamepad. What is left from
-`jsA8E_integration.md` is bigger and needs decisions: remote sync of the library
-(needs a server and a protocol choice), automation/MCP (headless harness and API
-surface), a HostFS-like folder (build a floppy from uploaded files), and `.dim`/ACSI
-images (need real samples). Also unverified: real-GPU CRT speed, real touch
-devices, Firefox/Safari.
+Done since step 3: snapshot UI, physical gamepad, headless automation + MCP server
+(`AUTOMATION.md`), WebDAV remote sync (ported, tested against a mock server) and floppies
+built from files/folders. Open: validate remote sync against a real Nextcloud and
+document the user's CORS setup; breakpoints/stepping in the automation (needs PCE's debugger
+exported from the glue); driving the open browser page through MCP; `.dim`/ACSI images
+(need real samples). Unverified: real-GPU CRT speed, real touch devices, Firefox/Safari.
 
 ## Still to decide
 

@@ -51,6 +51,9 @@ const PAGE_HELPERS = `
 async function openPage(query) {
   const page = await chrome.openPage(base + "/web/index.html" + (query === undefined ? "?crt=0" : query));
   await page.waitFor("window.PCE_ST_APP && PCE_ST_APP.isRunning()", 45000, "machine running");
+  // The library restores the floppies of the last session in the background: wait for it, or
+  // it could mount over what a test mounts.
+  await page.waitFor("window.PCE_ST_LIBRARY && PCE_ST_LIBRARY.isRestored()", 15000, "library restored");
   await page.evaluate(PAGE_HELPERS);
   return page;
 }
@@ -670,6 +673,7 @@ test("the floppies mounted in A: and B: come back after a reload", async functio
   // Opening the same file name again adds a revision instead of failing.
   await again.evaluate(pickFile("disk1", makeBlankST("KEEP2", []), "keep_me.st"));
   await again.waitFor("PCE_ST_LIBRARY.listRevisions(PCE_ST_LIBRARY.listFiles().filter(function(f){return f.name==='keep_me.st';})[0].id).length === 2", 5000, "second revision");
+  await again.sleep(500);                      // let the library finish writing before the data is cleared
   await again.close();
 });
 
@@ -703,6 +707,12 @@ test("a change the guest makes to a mounted floppy is saved in the library", asy
     names = listRoot(Buffer.from(bytes)).map(function (e) { return e.name; }).sort();
     if (names.length === 2) break;
     await page.sleep(1000);
+  }
+  if (names.length !== 2) {
+    await page.screenshot("/tmp/pce-st-guest.png");
+    console.log("diagnostics:", JSON.stringify(await page.evaluate("[PCE_ST_APP.getFloppyInfo(0), PCE_ST_LIBRARY.listRevisions(window.__gid).length, PCE_ST_LIBRARY.listFiles().map(function(f){return [f.name,f.mountedSlot,f.dirty];})]")));
+    const image = await page.evaluate("PCE_ST_APP.flushFloppy(0).then(function(f){return Array.from(f.bytes);})");
+    console.log("machine floppy root:", JSON.stringify(listRoot(Buffer.from(image))));
   }
   assert.deepStrictEqual(names, ["HELLO.TXT", "X"]);
   await page.evaluate("PCE_ST_LIBRARY.unmountFile(window.__gid).then(function(){return PCE_ST_LIBRARY.deleteFile(window.__gid);})");
@@ -797,6 +807,66 @@ test("a physical gamepad drives the joystick, even with the on-screen joystick h
   assert.strictEqual(await page.evaluate("document.getElementById('joystickPanel').hidden"), true, "the panel stays hidden");
   await page.evaluate("window.__pad.axes = [0, 0]; window.__pad.buttons = [{pressed:false,value:0}]; true");
   await page.waitFor("PCE_ST_APP.getJoystickState().then(function(s){return (s.port1 & 0x84) === 0;})", 3000, "released");
+  await page.close();
+});
+
+test("remote sync: the panel connects to a WebDAV server and uploads the library", async function () {
+  const { startServer } = require("../library/remote_test_support.js");
+  const remote = await startServer({ cors: true });
+  const page = await openPage();
+  try {
+    const tag = "R" + Date.now().toString(36).toUpperCase().slice(-7);
+    await page.evaluate("__click('btnLayoutWork')");
+    assert.strictEqual(await page.evaluate("document.querySelector('.disklib-remote-label').textContent"), "Configure");
+    await page.evaluate("PCE_ST_LIBRARY.addFile('" + tag + ".ST', PCE_STImage.createFloppy({label:'REMOTE'}))");
+    await page.evaluate("document.querySelector('.disklib-remote-btn').click()");
+    assert.strictEqual(await page.evaluate("document.querySelector('.remoteSyncDialog').open"), true, "the connection dialog opens");
+    await page.evaluate("(function(){var d=document.querySelector('.remoteSyncDialog');" +
+      "function set(c,v){var e=d.querySelector(c);e.value=v;e.dispatchEvent(new Event('input'));}" +
+      "set('.remote-url','" + remote.url + "');set('.remote-user','leo');set('.remote-password','secret');" +
+      "var sc=d.querySelector('.remote-scope');sc.value='library';sc.dispatchEvent(new Event('change'));" +
+      "d.querySelector('.remote-connect').click();return true;})()");
+    await page.waitFor("document.querySelector('.disklib-remote-label').textContent === 'Sync'", 15000, "connected");
+    // The first sync happens on connect; wait for the manifest to appear on the server.
+    let found = false;
+    for (let i = 0; i < 30 && !found; i++) { found = remote.files.has("library.json"); if (!found) await page.sleep(500); }
+    if (!found) {
+      await page.evaluate("document.querySelector('.disklib-remote-btn').click()");
+      for (let i = 0; i < 30 && !found; i++) { found = remote.files.has("library.json"); if (!found) await page.sleep(500); }
+    }
+    assert.ok(found, "library.json reached the server");
+    const manifest = JSON.parse(remote.files.get("library.json").body.toString());
+    assert.ok(manifest.library.some(function (e) { return e.name === tag + ".ST"; }), "the floppy is in the remote manifest");
+    assert.ok(Array.from(remote.files.keys()).some(function (n) { return n.indexOf("blobs/") === 0; }), "its content is a blob");
+    await page.evaluate("PCE_ST_LIBRARY.listFiles().forEach(function(f){PCE_ST_LIBRARY.deleteFile(f.id);})");
+  } finally {
+    await page.close();
+    remote.server.close();
+  }
+});
+
+test("a floppy can be built from loose files and from a folder, and mounted", async function () {
+  const page = await openPage();
+  const tag = "B" + Date.now().toString(36).toUpperCase().slice(-6);
+  await page.evaluate("__click('btnLayoutWork')");
+  await page.evaluate("window.prompt = function(){ return '" + tag + "'; }; true");
+  // Loose files: a program and a data file together.
+  await page.evaluate("(function(){var dt=new DataTransfer();dt.items.add(new File([new Uint8Array([0x60,0x1a,0,0])],'GAME.PRG'));dt.items.add(new File(['level one'],'LEVEL.DAT'));" +
+    "var i=document.querySelector('.disklib-from-files-input');i.files=dt.files;i.dispatchEvent(new Event('change'));return true;})()");
+  await page.waitFor("PCE_ST_LIBRARY.listFiles().some(function(f){return f.name==='" + tag + ".st';})", 5000, "the floppy exists");
+  // A folder: files carry their relative paths.
+  await page.evaluate("window.prompt = function(){ return '" + tag + "F'; }; (function(){var dt=new DataTransfer();" +
+    "var a=new File(['x'],'RUN.PRG');Object.defineProperty(a,'webkitRelativePath',{value:'mygame/RUN.PRG'});" +
+    "var b=new File(['y'],'MAP.DAT');Object.defineProperty(b,'webkitRelativePath',{value:'mygame/data/MAP.DAT'});dt.items.add(a);dt.items.add(b);" +
+    "var i=document.querySelector('.disklib-from-folder-input');i.files=dt.files;i.dispatchEvent(new Event('change'));return true;})()");
+  await page.waitFor("PCE_ST_LIBRARY.listFiles().some(function(f){return f.name==='" + tag + "F.st';})", 5000, "the folder floppy exists");
+  const listing = "PCE_ST_LIBRARY.downloadFile(PCE_ST_LIBRARY.listFiles().filter(function(f){return f.name==='%N';})[0].id).then(function(r){return PCE_STImage.verify(new Uint8Array(r.buffer)).files.map(function(f){return f.path;}).sort();})";
+  assert.deepStrictEqual(await page.evaluate(listing.replace("%N", tag + ".st")), ["GAME.PRG", "LEVEL.DAT"]);
+  assert.deepStrictEqual(await page.evaluate(listing.replace("%N", tag + "F.st")), ["DATA/MAP.DAT", "RUN.PRG"], "the folder's name is dropped, its structure kept");
+  // It mounts like any floppy.
+  await page.evaluate("PCE_ST_LIBRARY.mountFile(PCE_ST_LIBRARY.listFiles().filter(function(f){return f.name==='" + tag + ".st';})[0].id, 1)");
+  assert.strictEqual(await page.evaluate("PCE_ST_APP.getFloppyInfo(1).name"), tag + ".st");
+  await page.evaluate("PCE_ST_LIBRARY.listFiles().forEach(function(f){PCE_ST_LIBRARY.deleteFile(f.id);})");
   await page.close();
 });
 

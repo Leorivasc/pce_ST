@@ -166,6 +166,35 @@ revisions, trash, packages) is independent of the machine.
   real image is available.
 - **Packages**: export/import through the panel is covered by a browser test.
 
+## Remote sync (WebDAV) and files-to-floppy (after step 3)
+
+- **Remote sync**: ported from jsA8E (`web/js/app/remote_workspace.js`,
+  `remote_library.js`, `remote_sync_ui.js`; globals `PCE_STRemote*`). Two scopes: the
+  *workspace* (the mounted floppies in one `workspace.pcest`) or the *whole library*
+  (`library.json` + content-addressed `blobs/`, incremental, with tombstones so
+  deletions propagate and conflicts keep both variants). Identity file
+  `.pce-st-remote.json`; browser config in `localStorage` (`pce_st.remoteWorkspace.v1`).
+  The title bar of the library panel has the LED/connect button and a settings button;
+  the dialog asks for the WebDAV folder URL, user and an application password (kept in
+  memory unless "remember" is ticked).
+- **Server requirements** (CORS is enforced by the browser): the server must answer
+  preflight `OPTIONS` without authentication and send
+  `Access-Control-Allow-Origin: <the page's origin>`, `Allow-Methods: GET, HEAD, PUT,
+  MKCOL, DELETE, OPTIONS`, `Allow-Headers: Authorization, If-Match, If-None-Match,
+  Content-Type` and `Expose-Headers: ETag`. Nextcloud/ownCloud need those headers added in
+  the reverse proxy for `/remote.php/dav/`, or serve PCE_ST from the same server.
+  Typical URL: `https://server/remote.php/dav/files/<user>/PCE_ST/`.
+- **Tests**: the five remote tests of jsA8E ported to `tests/library/remote_*.test.js`
+  with a mock WebDAV server (`remote_test_support.js`, `cors: true` for browsers), and a
+  browser test that connects the panel to that server and checks the uploaded manifest and
+  blobs. **Not validated against a real Nextcloud yet** (jsA8E's version was).
+- **Floppy from files** (the HostFS-like item): the library panel has two buttons that
+  pack the files you choose, or a whole folder (subfolders kept), into a new 720K floppy
+  added to the library. `PCE_STImage.createFloppy` now builds folders (`DIR/SUB/FILE`
+  names), splits long names into 8.3 with `~N` for collisions, and fills folders that span
+  several clusters. Loose `.prg` files uploaded alone are still wrapped one per floppy.
+  The same builder is `media.buildFloppy` in the automation API.
+
 ## Decisions
 
 - Package extension `.pcest`, format `pce-st-library-export`.

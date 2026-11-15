@@ -57,39 +57,109 @@
 
     // 1 Jan 2026, 12:00
     const DATE = ((2026 - 1980) << 9) | (1 << 5) | 1, TIME = 12 << 11;
-    let entry = 0;
     let nextCluster = 2;
-    function dirEntry(base, ext, attr, cluster, size) {
-      if (entry >= ROOT_ENTRIES) throw new Error("The floppy's root directory is full");
-      const o = ROOT_START * SECTOR + entry * 32;
-      put(base, o, 8);
-      put(ext, o + 8, 3);
-      img[o + 11] = attr;
-      view.setUint16(o + 22, TIME, true);
-      view.setUint16(o + 24, DATE, true);
-      view.setUint16(o + 26, cluster, true);
-      view.setUint32(o + 28, size, true);
-      entry++;
-    }
+    const clusterBytes = SPC * SECTOR;
 
-    if (opts.label) {
-      const label = shortName(opts.label);
-      dirEntry(label.base, label.ext, 0x08, 0, 0);
-    }
-    (opts.files || []).forEach(function (file) {
-      const data = file.data instanceof Uint8Array ? file.data : new Uint8Array(file.data);
-      const clusters = Math.max(1, Math.ceil(data.length / (SPC * SECTOR)));
-      if (nextCluster - 2 + clusters > MAX_CLUSTERS) throw new Error("The files do not fit on a 720K floppy");
+    // Takes `count` clusters and links them into a chain; returns the first.
+    function allocate(count) {
+      if (nextCluster - 2 + count > MAX_CLUSTERS) throw new Error("The files do not fit on a 720K floppy");
       const first = nextCluster;
-      for (let i = 0; i < clusters; i++) {
+      for (let i = 0; i < count; i++) {
         const c = nextCluster++;
-        setFat(c, i === clusters - 1 ? 0xfff : c + 1);
-        const chunk = data.subarray(i * SPC * SECTOR, Math.min(data.length, (i + 1) * SPC * SECTOR));
+        setFat(c, i === count - 1 ? 0xfff : c + 1);
+      }
+      return first;
+    }
+    function writeEntry(at, base, ext, attr, cluster, size) {
+      put(base, at, 8);
+      put(ext, at + 8, 3);
+      img[at + 11] = attr;
+      view.setUint16(at + 22, TIME, true);
+      view.setUint16(at + 24, DATE, true);
+      view.setUint16(at + 26, cluster, true);
+      view.setUint32(at + 28, size, true);
+    }
+    function writeClusters(first, data) {
+      for (let c = first, i = 0; c !== 0xfff && c < 0xff8; c = fatChain(c), i++) {
+        const chunk = data.subarray(i * clusterBytes, Math.min(data.length, (i + 1) * clusterBytes));
         img.set(chunk, (DATA_START + (c - 2) * SPC) * SECTOR);
       }
-      const name = shortName(file.name);
-      dirEntry(name.base, name.ext, 0x20, data.length ? first : 0, data.length);
+    }
+    function fatChain(cluster) {
+      const o = Math.floor(cluster * 3 / 2);
+      const value = fat[o] | (fat[o + 1] << 8);
+      return cluster & 1 ? value >> 4 : value & 0xfff;
+    }
+
+    // The files form a tree: "SUB/DIR/FILE.TXT" puts FILE.TXT in folders SUB and DIR.
+    const tree = { dirs: new Map(), files: [] };
+    (opts.files || []).forEach(function (file) {
+      const parts = String(file.name).split(/[\\/]/).filter(Boolean);
+      if (!parts.length) throw new Error("A file needs a name");
+      let node = tree;
+      parts.slice(0, -1).forEach(function (part) {
+        const key = shortName(part);
+        const id = key.ext ? key.base + "." + key.ext : key.base;
+        if (!node.dirs.has(id)) node.dirs.set(id, { base: key.base, ext: key.ext, dirs: new Map(), files: [] });
+        node = node.dirs.get(id);
+      });
+      node.files.push({ name: parts[parts.length - 1], data: file.data instanceof Uint8Array ? file.data : new Uint8Array(file.data) });
     });
+
+    // Short names that collide inside a folder get a ~N suffix.
+    function uniqueNames(list) {
+      const used = new Set();
+      return list.map(function (item) {
+        let base = item.base, n = 1;
+        while (used.has(base + "." + item.ext)) base = item.base.substring(0, Math.max(1, 8 - String(n + 1).length - 1)) + "~" + (++n);
+        used.add(base + "." + item.ext);
+        return { base: base, ext: item.ext };
+      });
+    }
+
+    // Writes a folder's entries. `at(i)` gives the byte offset of entry i.
+    function fillDirectory(node, at, capacity) {
+      const items = [];
+      node.files.forEach(function (f) { const n = shortName(f.name); items.push({ base: n.base, ext: n.ext, file: f }); });
+      node.dirs.forEach(function (d) { items.push({ base: d.base, ext: d.ext, dir: d }); });
+      const names = uniqueNames(items);
+      if (items.length > capacity) throw new Error("A folder of the floppy is full");
+      return items.map(function (item, i) {
+        return { slot: at(i), base: names[i].base, ext: names[i].ext, item: item };
+      });
+    }
+    function populate(node, entries, parentCluster, selfCluster) {
+      entries.forEach(function (e) {
+        if (e.item.file) {
+          const data = e.item.file.data;
+          const clusters = Math.ceil(data.length / clusterBytes);
+          const first = clusters ? allocate(clusters) : 0;
+          if (clusters) writeClusters(first, data);
+          writeEntry(e.slot, e.base, e.ext, 0x20, first, data.length);
+        } else {
+          const dir = e.item.dir;
+          const count = dir.files.length + dir.dirs.size + 2;
+          const first = allocate(Math.ceil(count * 32 / clusterBytes));
+          const base = (DATA_START + (first - 2) * SPC) * SECTOR;
+          // Entries of a folder that spans several clusters are contiguous only when its
+          // clusters are: they are, because allocate() hands out consecutive clusters.
+          writeEntry(base, ".", "", 0x10, first, 0);
+          writeEntry(base + 32, "..", "", 0x10, selfCluster, 0);
+          const sub = fillDirectory(dir, function (i) { return base + 64 + i * 32; }, Math.floor(Math.ceil(count * 32 / clusterBytes) * clusterBytes / 32) - 2);
+          writeEntry(e.slot, e.base, e.ext, 0x10, first, 0);
+          populate(dir, sub, selfCluster, first);
+        }
+      });
+    }
+
+    let rootSlot = 0;
+    if (opts.label) {
+      const label = shortName(opts.label);
+      writeEntry(ROOT_START * SECTOR, label.base, label.ext, 0x08, 0, 0);
+      rootSlot = 1;
+    }
+    const rootEntries = fillDirectory(tree, function (i) { return ROOT_START * SECTOR + (rootSlot + i) * 32; }, ROOT_ENTRIES - rootSlot);
+    populate(tree, rootEntries, 0, 0);
 
     img.set(fat, 1 * SECTOR);
     img.set(fat, (1 + SPF) * SECTOR);

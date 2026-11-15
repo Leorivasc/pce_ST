@@ -343,6 +343,12 @@
     btnDiskLibrary.addEventListener("click", function () { setLibraryPanelVisible(!diskLibraryPanel.hidden); });
     btnSnapshots.addEventListener("click", function () { setSnapshotPanelVisible(snapshotPanel.hidden); });
 
+    PCE_STRemoteSyncUI.init({
+      app: { getDiskLibrary: function () { return library; } },
+      panel: diskLibraryPanel,
+      buttons: [btnDiskLibrary, document.querySelector('[data-mobile-proxy="btnDiskLibrary"]')],
+    });
+
     PCE_STSnapshotUI.init({
       app: app,
       panel: snapshotPanel,

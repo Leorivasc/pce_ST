@@ -206,7 +206,8 @@ value played since the last report; 0 = exact silence). The proxy creates the
   and export/import of `.pcest` packages. The library is `window.PCE_ST_LIBRARY`
   (see `LIBRARY.md`). A *View the files* button opens a read-only FAT12 view
   (folders, preview, per-file download). `.msa` files are converted to `.st` when
-  added. Not done yet: remote sync.
+  added. Remote sync (WebDAV) is in the title bar; two buttons build a floppy from files or
+  from a folder.
 - **Snapshots panel** (camera button): *Quick slot* save/restore (IndexedDB
   `pce_st_snapshots`) and export/import of `.pcestsnap` files. A snapshot holds the
   whole WASM memory (deflate-compressed, ~240 KB), the machine configuration and

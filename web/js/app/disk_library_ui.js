@@ -310,6 +310,37 @@
       });
     }
 
+    // ---- floppies built from files ----
+
+    // Packs the chosen files (with their folders, for a folder) into a new 720K floppy.
+    function createFloppyFromFiles(fileList, isFolder) {
+      const chosen = Array.from(fileList || []);
+      if (!chosen.length) return;
+      const paths = chosen.map(function (file) {
+        const rel = String(file.webkitRelativePath || "");
+        // The chosen folder's own name is dropped: its contents become the floppy's root.
+        return isFolder && rel.indexOf("/") > 0 ? rel.substring(rel.indexOf("/") + 1) : file.name;
+      });
+      const stem = isFolder && chosen[0].webkitRelativePath ? chosen[0].webkitRelativePath.split("/")[0] : (chosen.length === 1 ? chosen[0].name.replace(/\.[^.]*$/, "") : "WORK");
+      const suggested = (stem.replace(/[^A-Za-z0-9_-]/g, "").toUpperCase().substring(0, 24) || "WORK") + ".st";
+      const answer = prompt("Floppy image filename:", suggested);
+      if (!answer) return;
+      const name = /\.st$/i.test(answer) ? answer : answer + ".st";
+      setStatus("Building " + name + "...", "busy");
+      Promise.all(chosen.map(function (file) { return file.arrayBuffer(); })).then(function (buffers) {
+        const image = window.PCE_STImage.createFloppy({
+          label: name.replace(/\.st$/i, "").substring(0, 11),
+          files: buffers.map(function (buffer, i) { return { name: paths[i], data: new Uint8Array(buffer) }; }),
+        });
+        return library.addFile(name, image, currentFolderId);
+      }).then(function (info) {
+        setStatus("Created " + info.name + " from " + chosen.length + " file" + (chosen.length === 1 ? "" : "s"), "success");
+        render();
+      }).catch(function (err) {
+        setStatus(err && err.message ? err.message : "Unable to build the floppy", "error");
+      });
+    }
+
     // ---- floppy contents (read-only view of the FAT12 file system) ----
 
     const TEXT_EXTENSIONS = /\.(txt|doc|asc|c|h|s|i|bat|inf|cfg|lst|rsc|ini|htm|html|md|log)$/i;
@@ -933,6 +964,15 @@
       }
       if (active) render();
     });
+
+    const fromFilesBtn = panel.querySelector(".disklib-from-files-btn");
+    const fromFilesInput = panel.querySelector(".disklib-from-files-input");
+    const fromFolderBtn = panel.querySelector(".disklib-from-folder-btn");
+    const fromFolderInput = panel.querySelector(".disklib-from-folder-input");
+    fromFilesBtn.addEventListener("click", function () { fromFilesInput.click(); });
+    fromFolderBtn.addEventListener("click", function () { fromFolderInput.click(); });
+    fromFilesInput.addEventListener("change", function () { const list = Array.from(fromFilesInput.files); fromFilesInput.value = ""; createFloppyFromFiles(list, false); });
+    fromFolderInput.addEventListener("change", function () { const list = Array.from(fromFolderInput.files); fromFolderInput.value = ""; createFloppyFromFiles(list, true); });
 
     contentsBackBtn.addEventListener("click", closeContents);
     contentsUpBtn.addEventListener("click", function () {
