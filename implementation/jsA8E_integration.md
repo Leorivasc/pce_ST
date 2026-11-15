@@ -175,8 +175,9 @@ clear ROMs.
    hash) **before** touching the browser. **Done.**
 2. **`STApp` and minimal shell**: copy the shell, prune, `STApp` behind the
    worker, RGB rendering, audio and input (including mouse). Memory-dump snapshot
-   test. *Step 1 (minimal page in the browser) is done; step 2 (copy and prune
-   the shell, `PCE_STApp`) is pending.*
+   test. *Step 1 (minimal page in the browser) and step 2 (the shell's frame with
+   `PCE_STApp` and the emulation controls) are done; see `NOTES.md`. The
+   library, panels and automation are steps 3 and 4.*
 3. **Library and media**: ST formats, floppies and ACSI, revisions and sync.
 4. **Automation/MCP/headless** and a deterministic test net.
 5. **HostFS/PRG (FAT)**, 68000 debugger.

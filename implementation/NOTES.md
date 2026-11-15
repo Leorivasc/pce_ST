@@ -12,14 +12,19 @@ repository is English. (Decision of 2026-11-15; see "Decisions made".)
 
 - Phase 0 (audit and build): **done** (2026-11-15).
 - Phase 1 (core as a library, tested in Node): **done** (2026-11-15).
-  To close it completely the WASM still had to be tested in a real browser
-  (done in phase 2, step 1).
-- Phase 2, **step 1** (minimal skeleton in the browser): **done** (2026-11-15).
-  `web/` page with a worker, video on an OffscreenCanvas, audio through an
-  AudioWorklet and keyboard and mouse input (Pointer Lock), tested in real
-  Chrome.
-- Phase 2, step 2 (copy and prune jsA8E's shell, `PCE_STApp`): pending.
-- Phase 2, step 3 (media and library): pending.
+- Phase 2, step 1 (minimal skeleton in the browser): **done** (2026-11-15).
+- Phase 2, **step 2** (jsA8E's shell with `PCE_STApp`): **done for the shell's
+  frame and the emulation controls** (2026-11-15): the page has jsA8E's look
+  (toolbar, themes, CRT screen, mobile tools), the machine runs behind
+  `PCE_STApp`/`PCE_STAppProxy`, and keyboard, mouse (capture and touch
+  trackpad), audio, floppy and ROM loading and snapshots (API) work, tested in
+  real Chrome.
+- Phase 2, step 2b: **on-screen Atari ST keyboard and joystick** (2026-11-15), also
+  tested in real Chrome. **Deliberately left for later** (they need the library or
+  are separate features): layout schemes with side panels, disk library and its UI
+  (step 3), HostFS, snapshot UI, persistent ROM library, remote sync, the
+  automation API/MCP (step 4), physical gamepad, assembler and debugger UI.
+- Phase 2, step 3 (media and library): **done** (3a-3d: library core, panel and Work layout, ROM library, workspace, guest changes saved, FAT12 contents view, MSA; see `LIBRARY.md`).
 
 ## How to build and test the core
 
@@ -29,8 +34,8 @@ Node, Python 3, make.
 
 ```bash
 scripts/build-core.sh                              # ~30 s -> build/out/
-node tests/core/core.test.js                       # 14 tests, ~35 s
-node tests/browser/browser.test.js                 # 9 tests in real Chrome, ~45 s
+node tests/core/core.test.js                       # 15 tests, ~35 s
+node tests/browser/browser.test.js                 # 25 tests in real Chrome, ~3 min
 node scripts/serve.js [port]                       # the page at http://127.0.0.1:8080/
 node tests/core/core.test.js --only=floppy         # a single test
 node tests/core/core.test.js /other/rom.img        # with another ROM
@@ -115,6 +120,18 @@ detected automatically from `core/st_glue.c`.
 10. Writing to an emulated floppy is slow (a new folder takes ~1200 frames to
     finish).
 
+### Joystick (step 2b)
+
+25. **PCE has no joystick input of its own**: it emulates one with the numeric
+    keypad (`kbd->keypad_joy`, switched by a "magic" `KP_5` event). The glue sets
+    that mode directly (`pce_st_set_keypad_joystick`) so it is deterministic and
+    can be tested (`pce_st_joystick_state` reads the IKBD's state). While the mode
+    is on the keypad no longer types digits, hence the on-screen joystick turns it
+    on only while it is shown, and `PCE_STApp.joystick()` ignores presses when it
+    is off.
+26. The IKBD's joystick 1 is the standard port; port 0 shares the mouse port.
+    The on-screen joystick uses port 1. A physical gamepad is not wired up yet.
+
 ### Snapshots: hypothesis confirmed
 
 Dumping the **whole WASM linear memory** (`Module.HEAPU8`, 17 MB, 240 KB with
@@ -130,32 +147,12 @@ no need to serialize PCE's devices one by one. Conditions:
 - If memory has grown (`ALLOW_MEMORY_GROWTH`) the size must be equalized before
   copying; a case with growth has not been tested yet.
 
-## Browser (step 1)
+## Browser
 
-Full reference for the protocol and the debugging API: `WEB.md`. Summary:
-
-Files in `web/`: `index.html`, `main.js` (main thread), `worker.js` (emulation),
-`audio-worklet.js`, `keymap.js`. `core/st_config.js` generates the core's
-configuration text and is shared by Node and the worker. `scripts/serve.js` is a
-static server without dependencies that only serves `/web/`,
-`/core/st_config.js`, `/build/out/` and `/roms/`, with COOP/COEP headers.
-
-- **Loop**: the worker accumulates real time (`budgetMs += dt × speed`, capped at
-  100 ms per tick like PCE) and calls `pce_st_step_frame()` while budget remains.
-  Speed 1×/2×/4× or maximum (12 ms batches of work).
-- **Video**: the worker converts RGB→RGBA and draws with `putImageData` on an
-  `OffscreenCanvas` (`transferControlToOffscreen`). The main thread **cannot read
-  that canvas**; for tests there is `PCE_ST_DEBUG.screenshot()` (the worker
-  returns the RGB buffer).
-- **Audio**: the worker sends `Int16Array` through a `MessagePort` straight to
-  the `AudioWorklet` (queue of ~2.7 s; starts with 40 ms accumulated; trims to
-  80 ms if it exceeds 250 ms; outputs silence if it runs dry). The worklet
-  reports queue, underruns, drops and peak every 0.5 s.
-- **Input**: `keydown/keyup` with `event.code` → PCE name (`web/keymap.js`) →
-  `pce_st_key_from_name`. Mouse: Pointer Lock, `movementX/Y` and buttons (bit 0
-  left, 1 right, 2 middle).
-- **Debugging**: `window.PCE_ST_DEBUG` (`state()`, `send()`, `screenshot()`,
-  `peek()`, `readFloppy()`). The worker also accepts `poke` and `peek`.
+The page, the `PCE_STApp` API, the run loop, rendering, input and the UI are
+documented in `WEB.md`. The code is in `web/`; `core/st_config.js` generates the
+core's configuration text and is shared by Node and the worker; `scripts/serve.js`
+is a static server without dependencies.
 
 ### Step 1 findings
 
@@ -187,20 +184,84 @@ static server without dependencies that only serves `/web/`,
     mounted floppy was a mix. Fixed in the harness and in the worker (order:
     `disk.eject` → write → `disk.insert`); a test covers it.
 
+### Step 2 findings
+
+19. **Painting must be decoupled from emulation.** With the CRT filter on and
+    software WebGL (headless Chrome has no GPU), a CRT-filtered frame costs more
+    than emulating it: turbo was no faster than real time (0.9×; 4.7× with the
+    filter off). In turbo the picture is now refreshed at most every 100 ms (1.5×
+    with the filter on, 6× off). A real GPU should not need this, but it was not
+    possible to measure here.
+20. **A test that cannot fail is worse than no test.** `writeMemory` only accepted
+    a `Uint8Array`; the tests passed arrays, the call failed silently, and the
+    "mute" test passed because the tone was never generated. The API now accepts
+    arrays, and the mute test also proves the tone is heard when audio is back on.
+21. **Test isolation in Chrome**: preferences persist in `localStorage` between
+    pages of the same origin (a test that selected the color monitor changed every
+    later test), so the test client clears it on close; stray Chrome helper
+    processes survived a killed run, so Chrome now runs in its own process group
+    and is killed as a group; calls pending when Chrome exits are rejected instead
+    of hanging forever. Pages in tests open with `?crt=0`. Assertions on UI state
+    that follows a browser event (for example the mouse button after Pointer Lock)
+    wait for it instead of reading it at once: the lock is set a moment before the
+    `pointerlockchange` event fires, and under load that gap showed up as a flaky
+    test.
+22. **No network at run time**: jsA8E's page loaded Font Awesome and two Google
+    fonts from CDNs; they are vendored in `web/vendor/` (licenses in
+    `NOTICE.md`), in line with the "no external dependencies" rule.
+23. **Commands sent while the machine is being created are lost** unless queued:
+    the worker holds every message until `PCE_STApp.create()` has finished.
+24. The CRT shader includes a composite-video color-bleeding stage. **Decision
+    (user, 2026-11-15): keep it**, since the STFM had a TV (composite) output; the
+    shader is unchanged.
+
+## Copied from jsA8E (origin commit `30fb949`)
+
+Recorded for deliverable 4 of `requirements.md` §11. Everything was renamed to
+`PCE_ST` (globals, storage keys, text); no reference to jsA8E/A8E remains in the
+code. Attribution is kept in `NOTICE.md`.
+
+| Taken | Where | How |
+|---|---|---|
+| Page structure and look | `web/index.html` | Toolbar (primary and secondary rows), brand/help tooltip, screen panel, input panel row, mobile action bar and tools sheet, ROM notice. Rewritten with the ST's controls; English text. |
+| Joystick | `web/index.html` (CX40 markup), `web/style.css`, `web/js/app/joystick.js` | The CX40 markup and styles are copied; the stick logic (drag, dead zone, fire) is a port that reports a state object instead of key events. |
+| On-screen keyboard | `web/js/app/keyboard.js`, `web/style.css` (end) | New: the Atari 8-bit keyboard does not carry over. Only the idea (buttons carrying key codes, sticky modifiers) is shared. |
+| Styles | `web/style.css` | Copied unchanged, except: the two Google Fonts imports now point to local fonts, and a few rules were added at the end (status line, touch). Unused selectors of the removed panels remain for now. |
+| LED sprite | `web/assets/leds.png` | Copied. |
+| CRT shaders | `web/js/render/shaders/vert.glsl`, `crt.frag.glsl` | Copied unchanged. `decode.frag.glsl` is new (RGB source instead of a palette lookup). |
+| Renderer | `web/js/render/gl.js` | Adapted from jsA8E's two-pass renderer: RGB texture source, variable size, no palette or VBXE planes. |
+| UI logic | `web/js/app/ui.js` | Rewritten around the pieces that carry over: theme preference, screen sizing and fullscreen, run/pause request handling, secondary controls, mobile tools, toggle buttons. |
+| Worker/proxy design | `web/emulator_worker.js`, `web/js/core/app_proxy.js` | Same shape (worker + proxy mirror + request/response with timeouts), new and much smaller code. |
+| Audio worklet | `web/js/audio/worklet.js` | Own code (a sample queue), same role. |
+
+**Left out for now** (not needed at this step, or tied to the 8-bit Atari): the
+on-screen Atari 8-bit keyboard (replaced by the ST's), console keys, layout schemes and side
+panels, the disk library and its UI, HostFS, the assembler, the printer, the
+snapshot UI, the persistent ROM library, remote sync, the automation API and MCP
+server, the physical gamepad support, the 6502 debugger and everything in `js/core` that emulates
+the 8-bit machine (CPU, ANTIC, GTIA, POKEY, SIO, VBXE, ...). Library, ROM
+persistence and snapshots arrive in steps 3 and 4.
+
 ## What was verified and what was not
 
-Verified in Node (14 tests): EmuTOS boot to the desktop in mono (640×400) and in
+Verified in Node (15 tests): EmuTOS boot to the desktop in mono (640×400) and in
 color (320×200); determinism between instances; equivalence of stepping by cycles
 or by frames; audio at emulated-time pace; the PSG produces the programmed tone
 (279 Hz measured); mouse (motion and click); keyboard; mounting a `.st` created
 in JS, with TOS reading its directory; guest write recovered with
 `pce_st_disk_flush`; snapshot by memory dump; PCE messages.
 
-In the browser (real Chrome, 9 tests): real-time start (71 fps, 1.0×), turbo,
-pause/resume, color monitor, keyboard, mouse with Pointer Lock, end-to-end audio
-(silence, tone, back to silence), floppy mounting from the interface.
+In the browser (real Chrome, 25 tests): self-start in real time (71 fps, 1.0×), the
+English UI, pause/resume, turbo, the real keyboard, end-to-end audio (silence,
+tone, back to silence), muting, the WebGL2 CRT filter and its button, the
+monitor and memory selectors (checked against TOS's `phystop`), floppy and ROM
+file selectors (including rejecting a wrong-size ROM), theme persistence,
+snapshots, Pointer Lock capture and mouse motion, the on-screen keyboard and
+joystick, touch trackpad, the mobile tools and input bar and the ROM notice.
 
-Not verified: **Firefox and Safari**, mobile/touch, joystick (how PCE exposes it
+Not verified: **Firefox and Safari**, real touch devices (only emulated touch),
+the CRT filter's speed on a real GPU, tap and long-press clicks (only dragging
+is tested), joystick (how PCE exposes it
 to the terminal layer), ACSI hard disks, `.msa` and `.dim` formats, medium
 resolution (640×200), audio drift in long sessions, memory growth in snapshots,
 STE.
@@ -218,6 +279,7 @@ does and where its reference is:
 | `tests/` (core in Node, browser in Chrome) | `README.md` (tests), `WEB.md` |
 | `roms/emutos/` | `roms/emutos/README.md` |
 | Analysis of jsA8E's shell | `jsA8E_integration.md` |
+| Library plan (step 3) | `LIBRARY.md` |
 | Goal, scope and risks | `../requirements.md` |
 
 ## First-session deliverables (`requirements.md` §11)
@@ -227,7 +289,7 @@ does and where its reference is:
 | 1 | WASM/JS decision and reproducible build | **Done**: WASM, Emscripten 7.0.0 pinned, `scripts/build-core.sh`. |
 | 2 | Minimal ST prototype with EmuTOS in a page (video, audio, keyboard, mouse) | **Done** and tested in real Chrome (`web/`). |
 | 3 | Project notes and directory structure | **Done** (this file and `README.md`). |
-| 4 | List of what was copied from jsA8E with its origin commit, and what was discarded | **Pending**: nothing has been copied from jsA8E yet. It will be done in step 2 and recorded in `NOTICE.md`. |
+| 4 | List of what was copied from jsA8E with its origin commit, and what was discarded | **Done for step 2**: see "Copied from jsA8E" above (updated as more is copied) and `NOTICE.md`. |
 | 5 | GPL v2 and copyright notices for Hampa Hug and James Friend | **Done**: `COPYING` and `NOTICE.md`. |
 
 ## Decisions made (2026-11-15)
@@ -237,6 +299,10 @@ does and where its reference is:
   messages, code comments, test names and commit messages. This applies to code
   copied from jsA8E as well (its UI and docs are already English; anything in
   another language must be translated when it is copied).
+- **CRT filter** (2026-11-15): keep jsA8E's shader unchanged, including its
+  composite-video color bleeding, because the STFM had a TV output.
+- **Order of work** (2026-11-15): the on-screen keyboard first (Atari ST styled), with
+  the joystick from jsA8E (CX40); then the library (step 3).
 - **Independence from jsA8E**: the project is independent and will diverge.
   What is useful is brought in (copied) from `../A8E/jsA8E` and the origin commit
   (`30fb949`) is recorded; no later synchronization is maintained. It replaces the
@@ -255,12 +321,14 @@ does and where its reference is:
   would require guessing the guest cursor's position (TOS/GEM-specific). The
   IKBD's absolute mode is only enabled by the guest software.
 
-## Next step (phase 2, step 2)
+## Next step (phase 2, after step 3)
 
-Copy and prune the shell from `../A8E/jsA8E` (commit `30fb949`, prefix `PCE_ST`,
-no reference to jsA8E/A8E) and write `PCE_STApp` (an adapter with the
-`A8EApp.create()` API) on top of `web/`'s worker. See `jsA8E_integration.md` §2
-and §4.
+Done since step 3: snapshot UI and physical gamepad. What is left from
+`jsA8E_integration.md` is bigger and needs decisions: remote sync of the library
+(needs a server and a protocol choice), automation/MCP (headless harness and API
+surface), a HostFS-like folder (build a floppy from uploaded files), and `.dim`/ACSI
+images (need real samples). Also unverified: real-GPU CRT speed, real touch
+devices, Firefox/Safari.
 
 ## Still to decide
 

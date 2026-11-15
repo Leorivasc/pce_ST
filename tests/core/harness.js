@@ -64,6 +64,9 @@ async function createCore(options) {
     reg: function (name) { return withStr(name, function (p) { return M._pce_st_reg(p); }); },
     key: function (event, code) { M._pce_st_key(event, code); },
     keyCode: function (name) { return withStr(name, function (p) { return M._pce_st_key_from_name(p); }); },
+    setJoystickMode: function (mode) { M._pce_st_set_keypad_joystick(mode); },
+    joystickMode: function () { return M._pce_st_get_keypad_joystick(); },
+    joystickState: function (port) { return M._pce_st_joystick_state(port); },
     mouse: function (dx, dy, buttons) { M._pce_st_mouse(dx, dy, buttons); },
     // Mounts an image in A: (drive 0) or B: (drive 1) from JS bytes.
     // Eject first: PCE saves the previous floppy to the file if the guest

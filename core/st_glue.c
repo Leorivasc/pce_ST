@@ -371,6 +371,33 @@ unsigned pce_st_key_from_name (const char *name)
 }
 
 
+/*
+ * Joystick. PCE has no joystick input of its own: it emulates one with the
+ * numeric keypad. While that mode is on, the keypad keys KP_8/KP_2/KP_4/KP_6
+ * (and KP_7/9/1/3 for diagonals) move the stick and KP_0 is the fire button.
+ * mode: 0 = the keypad types as usual, 1 = joystick in port 1 (the standard
+ * joystick port), 2 = joystick in port 0 (shared with the mouse).
+ */
+EMSCRIPTEN_KEEPALIVE
+void pce_st_set_keypad_joystick (unsigned mode)
+{
+	par_sim->kbd.keypad_joy = (mode > 2) ? 0 : mode;
+}
+
+EMSCRIPTEN_KEEPALIVE
+unsigned pce_st_get_keypad_joystick (void)
+{
+	return (par_sim->kbd.keypad_joy);
+}
+
+/* IKBD joystick state of a port: bit 0 up, 1 down, 2 left, 3 right, 7 fire. */
+EMSCRIPTEN_KEEPALIVE
+unsigned pce_st_joystick_state (unsigned port)
+{
+	return (par_sim->kbd.joy[port & 1]);
+}
+
+
 /* PCE messages (media, reset, etc.). Returns 0 if accepted. */
 EMSCRIPTEN_KEEPALIVE
 int pce_st_msg (const char *msg, const char *val)

@@ -30,14 +30,35 @@ Version 1.4 (`roms/emutos/etos192us.img`). License: GPL (see
 <https://sourceforge.net/projects/emutos/files/emutos/1.4/emutos-src-1.4.tar.gz>.
 It contains Digital Research code (BDOS, VDI, AES, desktop) released under GPL.
 
+## Font Awesome Free
+
+Icons of the interface, `web/vendor/fontawesome/` (version 6.5.1,
+<https://fontawesome.com>). Icons: CC BY 4.0; fonts: SIL OFL 1.1; code: MIT. See
+`web/vendor/fontawesome/LICENSE.txt`.
+
+## Exo 2 and Roboto Condensed
+
+Fonts of the interface, `web/vendor/fonts/` (Latin subsets, from Google Fonts).
+License: SIL Open Font License 1.1.
+
+## CRT shader
+
+`web/js/render/shaders/crt.frag.glsl` is based on the CRT shader by Timothy
+Lottes (public domain), adapted in jsA8E and used here.
+
 ## Project code
 
 `core/`, `web/`, `scripts/` and `tests/` are this project's code, under GPL v2.
 `core/st_glue.c` is a derivative work of PCE's `src/arch/atarist/main.c` (same
 symbols, same license).
 
-## Pending
+## Code originally from jsA8E
 
-When code from jsA8E is copied (the shell, phase 2), record here its authorship,
-its license (GPL v2) and the origin commit (`30fb949`), leaving no references to
-jsA8E/A8E in the copied code (decision recorded in `implementation/NOTES.md`).
+Parts of the shell come from jsA8E (origin commit `30fb949`, GPL v2, by Leo Rivas,
+based on A8E by AnimaInCorpore and Sascha Springer): the page structure and CSS
+(`web/index.html`, `web/style.css`, `web/assets/leds.png`), the CRT vertex and
+fragment shaders (`web/js/render/shaders/`), and the logic and structure of the
+user interface (themes, screen sizing, fullscreen, run/pause handling, mobile
+tools), reworked for the ST. The list of what was copied and what was left out is
+in `implementation/NOTES.md` ("Copied from jsA8E"). No reference to the original
+project remains in the code, by decision of the project.

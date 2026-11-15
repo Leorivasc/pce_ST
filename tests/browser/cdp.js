@@ -108,7 +108,8 @@ async function launch(options) {
     "--window-size=" + (opts.width || 1000) + "," + (opts.height || 900),
     "about:blank",
   ];
-  const proc = spawn(findChrome(), args, { stdio: ["ignore", "ignore", "pipe"] });
+  // Own process group: Chrome spawns helper processes, and closing must kill them all.
+  const proc = spawn(findChrome(), args, { stdio: ["ignore", "ignore", "pipe"], detached: true });
   const wsUrl = await new Promise(function (resolve, reject) {
     let text = "";
     const timer = setTimeout(function () { reject(new Error("Chrome did not open the debugging port")); }, 20000);
@@ -135,7 +136,17 @@ async function launch(options) {
       events.push(msg);
     }
   });
+  // If Chrome goes away, every call still waiting for an answer fails instead of hanging.
+  let chromeGone = false;
+  function failPending(reason) {
+    chromeGone = true;
+    pending.forEach(function (p) { p.reject(new Error(reason)); });
+    pending.clear();
+  }
+  proc.on("exit", function () { failPending("Chrome exited"); });
+
   function call(method, params, sessionId) {
+    if (chromeGone) return Promise.reject(new Error("Chrome exited"));
     const id = nextId++;
     return new Promise(function (resolve, reject) {
       pending.set(id, { resolve: resolve, reject: reject });
@@ -188,8 +199,43 @@ async function launch(options) {
       mouse: async function (type, x, y, button) {
         await sc("Input.dispatchMouseEvent", { type: type, x: x, y: y, button: button || "none", buttons: type === "mouseReleased" ? 0 : 1, clickCount: type === "mousePressed" || type === "mouseReleased" ? 1 : 0 });
       },
+      // Touch input: type is touchStart, touchMove or touchEnd; points is [{x, y}].
+      touch: async function (type, points) {
+        await sc("Input.dispatchTouchEvent", { type: type, touchPoints: (points || []).map(function (p, i) { return { x: p.x, y: p.y, id: i }; }) });
+      },
+      // Emulates a viewport size (mobile = true enables the touch/mobile mode).
+      setViewport: async function (width, height, mobile) {
+        await sc("Emulation.setDeviceMetricsOverride", { width: width, height: height, deviceScaleFactor: 1, mobile: !!mobile });
+        if (mobile) await sc("Emulation.setTouchEmulationEnabled", { enabled: true });
+      },
       sleep: function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); },
-      close: async function () { clearInterval(timer); await call("Target.closeTarget", { targetId: targetId }); },
+      // Closes the page. Its localStorage and IndexedDB databases are cleared first:
+      // they persist between pages of the same origin and tests must start clean.
+      // keepData leaves all of it (for tests that reload the page on purpose).
+      close: async function (keepData) {
+        if (!keepData) {
+          try { await page.evaluate("try { localStorage.clear(); } catch (e) { /* no storage */ } true"); } catch (e) { /* the page may be gone */ }
+          // Empties every object store (deleting the databases would block while the
+          // page still holds its connections).
+          const clear = "Promise.all(['pce_st_disk_library', 'pce_st_rom_library', 'pce_st_snapshots'].map(function (name) {" +
+            " return new Promise(function (resolve) {" +
+            "  var req = indexedDB.open(name);" +
+            "  req.onerror = req.onblocked = function () { resolve(); };" +
+            "  req.onupgradeneeded = function () { req.transaction.abort(); };" +
+            "  req.onsuccess = function () {" +
+            "   var db = req.result, names = Array.from(db.objectStoreNames);" +
+            "   if (!names.length) { db.close(); resolve(); return; }" +
+            "   var tx = db.transaction(names, 'readwrite');" +
+            "   names.forEach(function (n) { tx.objectStore(n).clear(); });" +
+            "   tx.oncomplete = tx.onerror = tx.onabort = function () { db.close(); resolve(); };" +
+            "  };" +
+            " });" +
+            "})).then(function () { return true; })";
+          try { await page.evaluate(clear); } catch (e) { /* the page may be gone */ }
+        }
+        clearInterval(timer);
+        await call("Target.closeTarget", { targetId: targetId });
+      },
     };
     return page;
   }
@@ -198,7 +244,7 @@ async function launch(options) {
     openPage: openPage,
     close: async function () {
       try { ws.close(); } catch (e) { /* already closed */ }
-      proc.kill("SIGKILL");
+      try { process.kill(-proc.pid, "SIGKILL"); } catch (e) { proc.kill("SIGKILL"); }
       try { fs.rmSync(userDir, { recursive: true, force: true }); } catch (e) { /* ignore */ }
     },
   };

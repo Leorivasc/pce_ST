@@ -90,37 +90,58 @@ load `.wasm` or workers from disk, so the server is required.
 
 ## Using the page
 
-| Control | What it does |
-|---|---|
-| **Start** | Creates the audio and starts the machine. Press it again to restart with another monitor. |
-| **Pause / Resume** | Stops or resumes emulation. |
-| **Reset** | Hardware reset (like the ST's reset button). |
-| **Speed** | 1×, 2×, 4× or Maximum (~6×). Audio only plays at 1×. |
-| **Monitor** | Monochrome 640×400 or color 320×200. Restarts the machine. |
-| **Mount in A:** | Loads a `.st` floppy image (720K FAT12, double sided). |
-| **Save A:** | Flushes the floppy and downloads it as `disk_A.st`. |
+The page starts the machine by itself (EmuTOS boots in ~18 s of emulated time;
+with **turbo** it takes ~3 s). It has the look of jsA8E, with the **Atari ST**
+theme by default.
 
-- **Boot**: EmuTOS takes ~18 s (emulated time) to show the desktop, in both
-  monochrome and color (~1270 and ~1070 frames), because of the floppy
-  time-outs. With **Maximum** it takes ~3 s.
+| Control (toolbar) | What it does |
+|---|---|
+| Play / Pause | Starts or pauses emulation. |
+| Reset (circular arrow) | Restarts the machine (power cycle: RAM is cleared; the floppy stays in its drive). |
+| Speaker | Audio on/off. |
+| ROM (`EmuTOS` + LED) | Loads another 192K TOS or EmuTOS ROM image and restarts. |
+| Floppy (disk icon) | Opens a `.st` floppy image in drive A:. |
+| Download | Saves floppy A: (with the changes the program made) as a `.st` file. |
+| TV | CRT filter on/off (remembered). |
+| Expand / window | Fullscreen for the display / for the whole workspace. |
+| Chip with arrows | Turbo: run as fast as possible (audio is muted). |
+| Mouse | Captures the mouse (same as clicking the screen). |
+| Gamepad | Shows the on-screen joystick (port 1). |
+| Keyboard | Shows the on-screen Atari ST keyboard. |
+| Down arrow (right end) | Shows **Monitor** (mono 640×400 or color 320×200), **Memory** (512K to 4 MB) and **Theme**. Changing monitor or memory restarts the machine. |
+
 - **Mouse**: click the screen to capture it (Pointer Lock); `Esc` releases it.
-  Left, right and middle buttons.
+  Left, right and middle buttons. **Touch**: drag to move the cursor, tap to
+  click, long press for right click.
+- **On-screen keyboard**: an Atari ST keyboard (two-tone keycaps, function row, cursor
+  cluster and numeric keypad). Tap a key to press it; several keys can be held on a
+  touch screen. **Shift, Control and Alternate** stay down until the next key is
+  released; double tap to lock one (red), tap again to unlock. Keys pressed on the
+  physical keyboard light up on it. The `(` and `)` keypad keys are drawn but
+  disabled: PCE has no key code for them.
+- **On-screen joystick** (the CX40 from jsA8E, port 1): drag the stick, press the red
+  button to fire. While it is shown, the numeric keypad keys `8 2 4 6` (and
+  `7 9 1 3` for diagonals) move the joystick and `0` fires, because PCE emulates
+  the joystick with the keypad.
 - **Keyboard**: active while the screen has focus or the mouse is captured.
   ST-specific keys: **Help = End**, **Undo = Page Down** (there is no Page Up).
   While the mouse is captured, `Esc` releases it and does not reach the
   program; with the mouse released and the screen focused it does.
-- **Floppies**: whatever the program writes to A: stays in memory; use
-  **Save A:** to get the updated image. Mounting another image replaces the
+- **Floppies**: whatever the program writes to A: stays in memory; use the
+  download button to get the updated image. Mounting another image replaces the
   previous one **without downloading** anything that was modified: save first.
-- **Status** (below the screen): fps, speed relative to real time, resolution
-  and audio state (queue, underruns, dropped). In monochrome at speed 1× it
-  should read ~71 fps and ~1.00×.
+- **Status line** (bottom left of the screen): fps, speed relative to real time
+  and video size. In monochrome at 1× it should read ~71 fps and ~1.00x.
+- **URL option**: `?crt=0` / `?crt=1` forces the CRT filter for that session.
+- **On a phone** the toolbar's extra controls move to a tools sheet ("More"), and the
+  action bar switches between the keyboard and the joystick.
 
 ## Tests
 
 ```bash
-node tests/core/core.test.js        # core in Node: 14 tests, ~35 s
-node tests/browser/browser.test.js  # page in real Chrome: 9 tests, ~45 s
+node tests/core/core.test.js        # core in Node: 15 tests, ~35 s
+for t in library_archive library_package disk_library st_image snapshot_codec gamepad; do node tests/library/$t.test.js; done   # library, seconds
+node tests/browser/browser.test.js  # page in real Chrome: 36 tests, ~4 min
 ```
 
 - Both need `scripts/build-core.sh` to have been run first.
@@ -155,11 +176,13 @@ core/
   st_glue.c          C glue: replaces PCE's main() and exports pce_st_*
   st_config.js       Builds the core's configuration text (Node and browser)
 web/
-  index.html         Page (step 1 skeleton)
-  main.js            Main thread: interface, keyboard, mouse, audio
-  worker.js          Emulation thread: loop, video, media
-  audio-worklet.js   Audio queue inside the AudioWorklet
-  keymap.js          KeyboardEvent.code -> PCE key names
+  index.html, style.css      The page (jsA8E look: toolbar, themes, CRT screen)
+  emulator_worker.js         Emulation worker (message dispatcher)
+  js/app/                    User interface (ui.js), on-screen keyboard and joystick, entry point
+  js/core/                   PCE_STApp (st_app.js), its proxy (app_proxy.js), keymap
+  js/render/                 WebGL2 renderer with CRT filter, Canvas 2D fallback, shaders
+  js/audio/                  AudioWorklet queue
+  vendor/                    Font Awesome and fonts, served locally (no CDN)
 scripts/
   build-core.sh      Builds PCE (clean copy) + st_glue.c -> build/out/
   serve.js           Static development server (no dependencies)
@@ -178,10 +201,11 @@ build/               Build output (not versioned)
   **Read it before planning** and update it after every improvement.
 - `NOTICE.md` and `COPYING`: license and attributions.
 - `implementation/CORE_API.md`: reference for the core's functions (`pce_st_*`).
-- `implementation/WEB.md`: worker protocol, debugging API and page
-  architecture.
+- `implementation/WEB.md`: page architecture, the `PCE_STApp` API, run loop,
+  rendering, input and UI.
 - `implementation/jsA8E_integration.md`: analysis of jsA8E's shell and the
   phase 2 plan.
+- `implementation/LIBRARY.md`: plan for the disk library (step 3).
 - `requirements.md`: goal, scope, risks and open questions.
 
 ## License

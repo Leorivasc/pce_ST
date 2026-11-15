@@ -282,6 +282,37 @@ test("color mode: boots at 320x200 with several colors", async function () {
   writePng(path.join(OUT, "color.png"), v.width, v.height, v.rgb);
 });
 
+test("the joystick is driven by the numeric keypad while joystick mode is on", async function () {
+  const core = await createCore();
+  core.stepFrames(60);
+  const press = function (name) { core.key(1, core.keyCode(name)); core.stepFrames(2); };
+  const release = function (name) { core.key(2, core.keyCode(name)); core.stepFrames(2); };
+  // Mode off: the keypad is just a keypad, the joystick does not move.
+  assert.strictEqual(core.joystickMode(), 0);
+  press("KP_8"); release("KP_8");
+  assert.strictEqual(core.joystickState(1), 0);
+  // Mode 1 = port 1: directions combine and fire is bit 7.
+  core.setJoystickMode(1);
+  assert.strictEqual(core.joystickMode(), 1);
+  press("KP_8");
+  assert.strictEqual(core.joystickState(1), 0x01, "up");
+  press("KP_4");
+  assert.strictEqual(core.joystickState(1), 0x05, "up + left");
+  press("KP_0");
+  assert.strictEqual(core.joystickState(1), 0x85, "up + left + fire");
+  release("KP_8"); release("KP_4"); release("KP_0");
+  assert.strictEqual(core.joystickState(1), 0, "released");
+  press("KP_2"); press("KP_6");
+  assert.strictEqual(core.joystickState(1), 0x0a, "down + right");
+  release("KP_2"); release("KP_6");
+  assert.strictEqual(core.joystickState(0), 0, "port 0 is untouched");
+  // Mode 2 = port 0.
+  core.setJoystickMode(2);
+  press("KP_6");
+  assert.strictEqual(core.joystickState(0), 0x08, "port 0 right");
+  release("KP_6");
+});
+
 test("PCE messages work (emu.pause is accepted, an unknown message is not)", async function () {
   const core = await createCore();
   assert.strictEqual(core.msg("emu.pause", "0"), 0);

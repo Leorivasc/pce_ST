@@ -1,68 +1,523 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PCE_ST</title>
-<style>
-  :root {
-    --bg: #14161a; --panel: #1d2026; --line: #2d323b; --text: #e6e8ec; --muted: #98a0ad;
-    --accent: #7cc4ff; --danger: #ff8d8d;
-  }
-  @media (prefers-color-scheme: light) {
-    :root { --bg: #f2f3f5; --panel: #ffffff; --line: #d5d8de; --text: #1c1f24; --muted: #5d6572; --accent: #0b6bcb; --danger: #b3261e; }
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
-  main { max-width: 980px; margin: 0 auto; padding: 12px 16px 32px; }
-  h1 { font-size: 16px; margin: 4px 0 10px; font-weight: 600; }
-  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
-  button, select, label.file {
-    background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px;
-    padding: 6px 10px; font: inherit; cursor: pointer;
-  }
-  button:disabled { opacity: .5; cursor: default; }
-  button.primary { border-color: var(--accent); color: var(--accent); }
-  label.file input { display: none; }
-  #screenwrap { background: #000; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-  canvas { display: block; width: 100%; aspect-ratio: 4 / 3; image-rendering: pixelated; outline: none; background: #000; }
-  canvas:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
-  #status { margin-top: 8px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  #hint { margin-top: 4px; color: var(--muted); font-size: 13px; }
-  #error { color: var(--danger); margin-top: 8px; white-space: pre-wrap; }
-</style>
-</head>
-<body>
-<main>
-  <h1>PCE_ST — Atari ST (step 1 skeleton)</h1>
-  <div class="bar">
-    <button id="start" class="primary">Start</button>
-    <button id="pause" disabled>Pause</button>
-    <button id="reset" disabled>Reset</button>
-    <label>Speed
-      <select id="speed">
-        <option value="1" selected>1×</option>
-        <option value="2">2×</option>
-        <option value="4">4×</option>
-        <option value="0">Maximum</option>
-      </select>
-    </label>
-    <label>Monitor
-      <select id="monitor">
-        <option value="mono" selected>Monochrome 640×400</option>
-        <option value="color">Color 320×200</option>
-      </select>
-    </label>
-    <label class="file">Mount in A: <input id="mount" type="file" accept=".st"></label>
-    <button id="save" disabled>Save A:</button>
-  </div>
-  <div id="screenwrap"><canvas id="screen" tabindex="0"></canvas></div>
-  <div id="status">Not started.</div>
-  <div id="hint">Click the screen to capture the mouse (Esc releases it). The keyboard is active while the screen has focus.
-    Help = End, Undo = Page Down.</div>
-  <div id="error"></div>
-</main>
-<script src="keymap.js"></script>
-<script src="main.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PCE_ST</title>
+    <link rel="icon" href="data:," />
+    <script>
+      // Apply the stored UI theme before the first paint (no flash of the default).
+      (function () {
+        var themes = ["classic", "800xl", "xegs", "65xe", "400-800", "st", "2600"];
+        var theme = "st";
+        try {
+          var stored = String(window.localStorage.getItem("pce_st_ui_theme") || "").toLowerCase();
+          if (themes.indexOf(stored) >= 0) theme = stored;
+        } catch (e) {
+          // storage unavailable: keep the default
+        }
+        document.documentElement.dataset.uiTheme = theme;
+      })();
+    </script>
+    <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="titleRow">
+          <span class="brandHelp" tabindex="0" role="button" aria-label="Show emulator help and credits">
+            <i class="fa-regular fa-circle-question" aria-hidden="true"></i>
+            <span class="brandTooltip" role="tooltip">
+              <strong>PCE_ST - Atari ST Emulator</strong><br />
+              Emulation core: PCE by Hampa Hug, browser port PCE.js by James Friend.<br />
+              System ROM: EmuTOS.<br />
+              <em>CRT Shader by Timothy Lottes</em><br />
+              <em>Icons by Font Awesome Free</em><br />
+
+              <div class="tt-section">
+                <span class="tt-heading">Keyboard</span>
+                Type normally on your keyboard while the screen has focus.
+                <div class="tt-row"><span class="tt-key">End</span> Help</div>
+                <div class="tt-row"><span class="tt-key">Page Down</span> Undo</div>
+              </div>
+
+              <div class="tt-section">
+                <span class="tt-heading">On-screen keyboard</span>
+                Tap a key to press it. Shift, Control and Alternate stay down until the next key; double tap to lock them.
+              </div>
+
+              <div class="tt-section">
+                <span class="tt-heading">Joystick (port 1)</span>
+                Drag the stick, press the red button to fire. While it is shown, the numeric keypad keys
+                <span class="tt-key">8 2 4 6</span> move it and <span class="tt-key">0</span> fires.
+              </div>
+
+              <div class="tt-section">
+                <span class="tt-heading">Mouse</span>
+                <div class="tt-row"><span class="tt-key">Click screen</span> Capture the mouse</div>
+                <div class="tt-row"><span class="tt-key">Esc</span> Release the mouse</div>
+                <div class="tt-row"><span class="tt-key">Touch</span> Drag to move, tap to click, long press for right click</div>
+              </div>
+
+              <div class="tt-section">
+                <span class="tt-heading">Status LEDs</span>
+                <div class="tt-icons">
+                  <span class="tt-icon"><i class="rom-status-led" aria-hidden="true"></i> not loaded</span>
+                  <span class="tt-icon"><i class="rom-status-led loaded" aria-hidden="true"></i> loaded</span>
+                </div>
+              </div>
+
+              <div class="tt-section">
+                <span class="tt-heading">Menu Icons</span>
+                <div class="tt-icons">
+                  <span class="tt-icon"><i class="fa-solid fa-floppy-disk"></i> open floppy in A:</span>
+                  <span class="tt-icon"><i class="fa-solid fa-download"></i> save floppy A:</span>
+                  <span class="tt-icon"><i class="fa-solid fa-play"></i>/<i class="fa-solid fa-pause"></i> run/pause</span>
+                  <span class="tt-icon"><i class="fa-solid fa-rotate-right"></i> reset</span>
+                  <span class="tt-icon"><i class="fa-solid fa-volume-high"></i>/<i class="fa-solid fa-volume-xmark"></i> audio</span>
+                  <span class="tt-icon"><i class="fa-solid fa-chevron-down"></i>/<i class="fa-solid fa-chevron-up"></i> more controls</span>
+                  <span class="tt-icon"><i class="fa-solid fa-expand"></i>/<i class="fa-solid fa-compress"></i> display fullscreen</span>
+                  <span class="tt-icon"><i class="fa-solid fa-window-maximize"></i>/<i class="fa-solid fa-compress"></i> workspace fullscreen</span>
+                  <span class="tt-icon"><span class="fa-layers fa-fw turbo-stack"><i class="fa-solid fa-microchip"></i><i class="fa-solid fa-forward-fast turbo-badge"></i></span> turbo</span>
+                  <span class="tt-icon"><i class="fa-solid fa-computer-mouse"></i> capture the mouse</span>
+                  <span class="tt-icon"><i class="fa-solid fa-gamepad"></i> on-screen joystick</span>
+                  <span class="tt-icon"><i class="fa-solid fa-keyboard"></i> on-screen keyboard</span>
+                </div>
+              </div>
+            </span>
+          </span>
+        </div>
+      </div>
+      <div class="controls">
+        <div class="controlsPrimary">
+          <div class="primaryControls">
+            <div id="toolbarLifecycleControls" class="iconControls iconControlsPrimary">
+              <button id="btnStart" class="primaryIconBtn" title="Start emulation." aria-label="Start emulation." disabled>
+                <i class="fa-solid fa-play"></i>
+              </button>
+              <button id="btnReset" class="primaryIconBtn" disabled title="Restart the machine (power cycle). Rebuilds the emulated ST from a blank state; the floppy stays in its drive." aria-label="Restart the machine (power cycle).">
+                <i class="fa-solid fa-rotate-right"></i>
+              </button>
+              <button id="btnAudio" class="toggle-btn active primaryIconBtn" title="Toggle emulator audio output on or off." aria-label="Toggle emulator audio output on or off." aria-pressed="true">
+                <i class="fa-solid fa-volume-high audio-on"></i>
+                <i class="fa-solid fa-volume-xmark audio-off"></i>
+              </button>
+            </div>
+            <label id="toolbarRom" class="fileBtn fileBtnPrimary" title="System ROM. EmuTOS is built in; click to load another TOS or EmuTOS ROM image.">
+              <input type="file" id="romInput" accept=".img,.rom,application/octet-stream" />
+              <span><b id="romName" class="romName">EmuTOS</b> <i id="romStatus" class="rom-status-led" aria-hidden="true"></i></span>
+            </label>
+            <label id="toolbarDiskOpen" class="fileBtn diskOpenBtn" title="Open a floppy disk image (.st, .msa) or a program (.prg) in drive A:.">
+              <input type="file" id="disk1" aria-label="Open floppy disk image" accept=".st,.msa,.prg,application/octet-stream" />
+              <span><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i></span>
+            </label>
+            <button id="btnSaveFloppy" class="primaryIconBtn" disabled title="Save floppy A: with the changes the program made, as a .st file." aria-label="Save floppy A:.">
+              <i class="fa-solid fa-download"></i>
+            </button>
+            <div id="toolbarUtilityControls" class="iconControls iconControlsPrimary">
+              <button id="btnCrt" class="toggle-btn active" title="CRT on: click for a clean image." aria-label="CRT filter" aria-pressed="true">
+                <span class="fa-layers fa-fw crt-stack" aria-hidden="true">
+                  <i class="fa-solid fa-tv"></i>
+                  <i class="fa-solid fa-slash crt-off-mark"></i>
+                </span>
+              </button>
+              <button id="btnFullscreen" title="Enter fullscreen mode for the emulator display area." aria-label="Enter fullscreen mode for the emulator display area."><i class="fa-solid fa-expand"></i></button>
+              <button id="btnAppFullscreen" title="Enter fullscreen mode for the complete emulator workspace." aria-label="Enter fullscreen mode for the complete emulator workspace."><i class="fa-solid fa-window-maximize"></i></button>
+              <button id="btnTurbo" class="toggle-btn" title="Toggle turbo mode to run emulation as fast as possible (audio is muted)." aria-label="Toggle turbo mode." aria-pressed="false">
+                <span class="fa-layers fa-fw turbo-stack">
+                  <i class="fa-solid fa-microchip"></i>
+                  <i class="fa-solid fa-forward-fast turbo-badge"></i>
+                </span>
+              </button>
+              <button id="btnMouse" class="toggle-btn" title="Capture the mouse for the emulated ST (Esc releases it)." aria-label="Capture the mouse." aria-pressed="false">
+                <i class="fa-solid fa-computer-mouse"></i>
+              </button>
+              <button id="btnJoystick" class="toggle-btn" title="Show the on-screen joystick (port 1)." aria-label="Show the on-screen joystick." aria-pressed="false">
+                <span class="fa-layers fa-fw joystick-stack">
+                  <i class="fa-solid fa-gamepad"></i>
+                  <i class="fa-solid fa-slash joystick-off-mark"></i>
+                </span>
+              </button>
+              <button id="btnKeyboard" class="toggle-btn" title="Show the on-screen keyboard." aria-label="Show the on-screen keyboard." aria-pressed="false">
+                <span class="fa-layers fa-fw keyboard-stack">
+                  <i class="fa-solid fa-keyboard"></i>
+                  <i class="fa-solid fa-slash keyboard-off-mark"></i>
+                </span>
+              </button>
+              <button id="btnSnapshots" class="toggle-btn" title="Show the snapshot controls." aria-label="Show the snapshot controls." aria-pressed="false">
+                <i class="fa-solid fa-camera-retro"></i>
+              </button>
+              <button id="btnDiskLibrary" class="toggle-btn" title="Show the floppy library (A: and B:)." aria-label="Show the floppy library." aria-pressed="false">
+                <i class="fa-solid fa-hard-drive"></i>
+              </button>
+            </div>
+          </div>
+          <div class="layoutSchemeControls" role="group" aria-label="Presentation layout">
+            <button id="btnLayoutEmulation" class="layoutSchemeBtn active" type="button" data-layout-scheme="emulation" aria-pressed="true" title="Use the Emulation layout." aria-label="Use the Emulation layout.">
+              <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
+            </button>
+            <button id="btnLayoutWork" class="layoutSchemeBtn" type="button" data-layout-scheme="work" aria-pressed="false" title="Use the Work layout: the floppy library next to the screen." aria-label="Use the Work layout.">
+              <i class="fa-solid fa-briefcase" aria-hidden="true"></i>
+            </button>
+          </div>
+          <button
+            id="btnControlsCollapse"
+            class="toolbarCollapseBtn"
+            type="button"
+            title="Expand the secondary toolbar controls."
+            aria-label="Expand the secondary toolbar controls."
+            aria-expanded="false"
+            aria-controls="secondaryControls"
+          >
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+        </div>
+        <div id="secondaryControls" class="controlsSecondary" hidden>
+          <div class="iconControls iconControlsSecondary">
+            <label class="toolbarSelectWrap" title="Choose the system ROM. ROMs you load are kept in this browser. The machine restarts.">
+              <span>ROM</span>
+              <select id="romSelect" class="toolbarSelect toolbarSelectWide" aria-label="System ROM">
+                <option value="">EmuTOS 1.4 (built in)</option>
+              </select>
+            </label>
+            <button id="btnRemoveRom" class="toggle-btn" type="button" disabled title="Remove the selected ROM from this browser." aria-label="Remove the selected ROM from this browser.">
+              <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+            </button>
+            <label class="toolbarSelectWrap" title="Select the monitor connected to the ST. The machine restarts.">
+              <span>Monitor</span>
+              <select id="monitorSelect" class="toolbarSelect toolbarSelectWide" aria-label="Monitor">
+                <option value="mono" selected>Monochrome 640x400</option>
+                <option value="color">Color 320x200</option>
+              </select>
+            </label>
+            <label class="toolbarSelectWrap" title="Select the amount of RAM. The machine restarts.">
+              <span>Memory</span>
+              <select id="ramSelect" class="toolbarSelect" aria-label="Memory">
+                <option value="512">512K</option>
+                <option value="1024" selected>1 MB</option>
+                <option value="2048">2 MB</option>
+                <option value="4096">4 MB</option>
+              </select>
+            </label>
+            <label class="toolbarSelectWrap" title="Choose the interface colors inspired by Atari hardware models.">
+              <span>Theme</span>
+              <select id="uiThemeSelect" class="toolbarSelect toolbarSelectWide" aria-label="Interface theme">
+                <option value="classic">CyberDeck</option>
+                <option value="800xl">Atari 800XL</option>
+                <option value="xegs">Atari XEGS</option>
+                <option value="65xe">Atari 65XE/130XE</option>
+                <option value="400-800">Atari 400/800</option>
+                <option value="st" selected>Atari ST</option>
+                <option value="2600">Atari 2600 Woodgrain</option>
+              </select>
+            </label>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="layout" data-layout-scheme="emulation">
+      <section class="screenPanel">
+        <div class="screenViewport">
+          <canvas id="screen" width="640" height="400"></canvas>
+          <div class="screenOverlay">
+            <div id="statusLine" class="statusLine" aria-live="off"></div>
+          </div>
+        </div>
+      </section>
+      <div
+        id="layoutSplitter"
+        class="layoutSplitter"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize library and emulator columns"
+        aria-valuemin="24"
+        aria-valuemax="60"
+        aria-valuenow="34"
+        tabindex="0"
+        title="Drag to resize the library and emulator columns"
+      ><span aria-hidden="true"></span></div>
+      <div class="layoutTools" aria-label="Tool panels">
+      <section id="diskLibraryPanel" class="disklibPanel" hidden aria-label="Floppy library">
+        <div class="disklib-titlebar">
+          <i class="fa-solid fa-hard-drive disklib-title-icon"></i>
+          <span class="disklib-title-text">Floppy Library</span>
+          <span class="disklib-current-path" aria-live="polite">Library</span>
+          <span class="disklib-status" aria-live="polite"></span>
+        </div>
+        <div class="disklib-mounted-panel">
+          <div class="disklib-mounted-title"><i class="fa-solid fa-plug"></i> Mounted devices</div>
+          <div class="disklib-mounted-list"></div>
+        </div>
+        <div class="disklib-toolbar">
+          <button class="disklib-btn disklib-upload-btn" title="Upload ST, MSA or PRG files" aria-label="Upload ST, MSA or PRG files">
+            <i class="fa-solid fa-upload" aria-hidden="true"></i>
+          </button>
+          <input type="file" class="disklib-upload-input" accept=".st,.msa,.prg,application/octet-stream" multiple hidden />
+          <button class="disklib-btn disklib-new-folder-btn" title="Create a folder" aria-label="Create a folder">
+            <i class="fa-solid fa-folder-plus" aria-hidden="true"></i>
+          </button>
+          <button class="disklib-btn disklib-new-floppy-btn" title="Create a blank 720K floppy in the current folder" aria-label="Create a blank 720K floppy in the current folder">
+            <i class="fa-solid fa-file-circle-plus" aria-hidden="true"></i>
+          </button>
+          <span class="disklib-toolbar-sep"></span>
+          <button class="disklib-btn disklib-sel-all-btn" title="Select all library entries" aria-label="Select all library entries">
+            <i class="fa-solid fa-check-double" aria-hidden="true"></i>
+          </button>
+          <button class="disklib-btn disklib-sel-none-btn" title="Deselect all library entries" aria-label="Deselect all library entries">
+            <i class="fa-regular fa-square" aria-hidden="true"></i>
+          </button>
+          <span class="disklib-toolbar-sep"></span>
+          <button class="disklib-btn disklib-dl-sel-btn" title="Download selected images" aria-label="Download selected images" disabled>
+            <i class="fa-solid fa-download" aria-hidden="true"></i>
+          </button>
+          <button class="disklib-btn disklib-btn-danger disklib-del-sel-btn" title="Delete selected images" aria-label="Delete selected images" disabled>
+            <i class="fa-solid fa-trash" aria-hidden="true"></i>
+          </button>
+          <button class="disklib-btn disklib-trash-btn" title="Open recoverable trash" aria-label="Open recoverable trash">
+            <i class="fa-solid fa-trash-can-arrow-up" aria-hidden="true"></i>
+          </button>
+          <button class="disklib-btn disklib-btn-danger disklib-purge-trash-btn" title="Purge all trash" aria-label="Purge all trash">
+            <i class="fa-solid fa-fire" aria-hidden="true"></i>
+          </button>
+          <button class="disklib-btn disklib-btn-danger disklib-purge-old-trash-btn" title="Purge trash older than..." aria-label="Purge trash older than...">
+            <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+          </button>
+          <span class="disklib-toolbar-sep"></span>
+          <button class="disklib-btn disklib-export-btn" title="Export the complete library" aria-label="Export the complete library">
+            <i class="fa-solid fa-box-archive" aria-hidden="true"></i>
+          </button>
+          <button class="disklib-btn disklib-workspace-export-btn" title="Export mounted workspace" aria-label="Export mounted workspace">
+            <i class="fa-solid fa-hard-drive"></i>
+          </button>
+          <button class="disklib-btn disklib-storage-btn" title="Show browser storage capacity" aria-label="Show browser storage capacity">
+            <i class="fa-solid fa-database" aria-hidden="true"></i>
+          </button>
+          <button class="disklib-btn disklib-import-btn" title="Import a complete library package" aria-label="Import a complete library package">
+            <i class="fa-solid fa-file-import" aria-hidden="true"></i>
+          </button>
+          <button class="disklib-btn disklib-cancel-btn" title="Cancel the active library operation" aria-label="Cancel the active library operation" disabled>
+            <i class="fa-solid fa-stop" aria-hidden="true"></i>
+          </button>
+          <input type="file" class="disklib-import-input" accept=".pcest,application/zip,application/octet-stream" hidden />
+        </div>
+        <div class="disklib-atr-view" hidden>
+          <div class="disklib-atr-toolbar">
+            <button class="disklib-btn disklib-atr-back-btn" type="button" title="Back to library" aria-label="Back to library">
+              <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+            </button>
+            <button class="disklib-btn disklib-atr-up-btn" type="button" title="Parent folder" aria-label="Parent folder" disabled>
+              <i class="fa-solid fa-turn-up" aria-hidden="true"></i>
+            </button>
+            <span class="disklib-atr-title"></span>
+            <span class="disklib-flex"></span>
+            <button class="disklib-btn disklib-atr-download-btn" type="button" title="Download the floppy image" aria-label="Download the floppy image">
+              <i class="fa-solid fa-download" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="disklib-atr-info" aria-live="polite"></div>
+          <div class="disklib-atr-content">
+            <div class="disklib-atr-cols-header">
+              <span>Name</span>
+              <span>Size</span>
+              <span>Type</span>
+              <span></span>
+              <span></span>
+            </div>
+            <div class="disklib-atr-list"></div>
+          </div>
+          <div class="disklib-atr-preview" hidden>
+            <div class="disklib-atr-preview-title"></div>
+            <pre class="disklib-atr-preview-text"></pre>
+          </div>
+        </div>
+        <div class="disklib-drop-zone">
+          <div class="disklib-table-scroll">
+            <div class="disklib-cols-header">
+              <span class="disklib-col disklib-col-chk"><input type="checkbox" class="disklib-master-chk" title="Select or deselect all" /></span>
+              <span class="disklib-col disklib-col-name">Name</span>
+              <span class="disklib-col disklib-col-drive">A:</span>
+              <span class="disklib-col disklib-col-drive">B:</span>
+              <span class="disklib-col disklib-col-actions"></span>
+            </div>
+            <div class="disklib-list"></div>
+          </div>
+          <div class="disklib-drop-hint"><i class="fa-solid fa-upload"></i> Drop ST, MSA or PRG files here</div>
+        </div>
+        <div class="disklib-searchbar">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input class="disklib-search-input" type="search" autocomplete="off" spellcheck="false" placeholder="Search library..." aria-label="Search library" />
+          <select class="disklib-filter-type" aria-label="Filter by type" title="Filter by type">
+            <option value="all">All types</option>
+            <option value="st">ST</option>
+            <option value="prg">PRG</option>
+          </select>
+          <select class="disklib-filter-status" aria-label="Filter by status" title="Filter by status">
+            <option value="all">All status</option>
+            <option value="mounted">Mounted</option>
+            <option value="dirty">Dirty</option>
+            <option value="clean">Clean</option>
+          </select>
+          <select class="disklib-sort" aria-label="Sort library" title="Sort library">
+            <option value="name">Name</option>
+            <option value="type">Type</option>
+            <option value="size">Size</option>
+            <option value="modified">Modified</option>
+          </select>
+        </div>
+        <div class="disklib-statusbar">
+          <span class="disklib-stat-count">0 files</span>
+          <span class="disklib-stat-sep">|</span>
+          <span class="disklib-stat-sel" hidden></span>
+          <span class="disklib-stat-info" aria-live="polite"></span>
+          <span class="disklib-flex"></span>
+          <span class="disklib-stat-total"></span>
+        </div>
+      </section>
+      <section id="snapshotPanel" class="snapshotPanel" hidden aria-label="Machine snapshots">
+        <div class="snapshot-titlebar">
+          <i class="fa-solid fa-camera-retro snapshot-title-icon"></i>
+          <span class="snapshot-title-text">Snapshots</span>
+          <span class="snapshot-title-meta">Quick slot + export/import</span>
+        </div>
+        <div class="snapshot-toolbar">
+          <label class="snapshot-label">Quick Slot</label>
+          <button class="snapshot-btn snapshot-save-btn" title="Save a snapshot of the whole machine into the browser's quick slot." aria-label="Save a snapshot into the quick slot">
+            <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+          </button>
+          <button class="snapshot-btn snapshot-load-btn" title="Restore the machine from the quick slot." aria-label="Restore the quick slot" disabled>
+            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+          </button>
+          <span class="snapshot-toolbar-sep"></span>
+          <label class="snapshot-label">File</label>
+          <button class="snapshot-btn snapshot-export-btn" title="Download a snapshot of the machine as a file." aria-label="Export a snapshot file">
+            <i class="fa-solid fa-download" aria-hidden="true"></i>
+          </button>
+          <button class="snapshot-btn snapshot-import-btn" title="Restore the machine from a snapshot file." aria-label="Import a snapshot file">
+            <i class="fa-solid fa-upload" aria-hidden="true"></i>
+          </button>
+          <input type="file" class="snapshot-import-input" accept=".pcestsnap,application/octet-stream" hidden />
+        </div>
+        <div class="snapshot-body">
+          <div class="snapshot-card">
+            <div class="snapshot-card-label">Quick Slot</div>
+            <div class="snapshot-card-value snapshot-slot-state">Empty</div>
+            <div class="snapshot-card-meta snapshot-slot-meta">No browser snapshot saved yet.</div>
+          </div>
+          <div class="snapshot-card">
+            <div class="snapshot-card-label">Contents</div>
+            <div class="snapshot-card-value">The whole machine</div>
+            <div class="snapshot-card-meta">RAM, CPU and chip state, and the floppies in A: and B:. The system ROM is not included: a snapshot needs the ROM it was taken with.</div>
+          </div>
+        </div>
+        <div class="snapshot-statusbar">
+          <span class="snapshot-status">Ready.</span>
+        </div>
+      </section>
+      </div>
+      <div id="inputPanelRow" class="inputPanelRow">
+        <section id="joystickPanel" class="joystickPanel" hidden aria-label="On-screen joystick">
+          <div class="joystickPanelInner">
+            <div class="cx40" id="joystickArea">
+              <div class="cx40-base">
+                <div class="cx40-cable"></div>
+                <div class="cx40-fire-housing">
+                  <button type="button" class="cx40-fire-btn" id="fireButton" aria-label="Joystick fire"></button>
+                </div>
+                <div class="cx40-markings-ring">
+                  <div class="cx40-arrow cx40-arrow-up"></div>
+                  <div class="cx40-arrow cx40-arrow-down"></div>
+                  <div class="cx40-arrow cx40-arrow-left"></div>
+                  <div class="cx40-arrow cx40-arrow-right"></div>
+                </div>
+                <div class="cx40-top-label">TOP</div>
+                <div class="cx40-boot">
+                  <div class="cx40-glow up" id="glowUp"></div>
+                  <div class="cx40-glow down" id="glowDown"></div>
+                  <div class="cx40-glow left" id="glowLeft"></div>
+                  <div class="cx40-glow right" id="glowRight"></div>
+                  <div class="cx40-stick-area" id="joystickStick">
+                    <div class="cx40-stick-hex"></div>
+                    <div class="cx40-stick-shaft"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section id="keyboardPanel" class="keyboardPanel" hidden aria-label="On-screen keyboard">
+          <div id="stKeyboard"></div>
+        </section>
+      </div>
+    </main>
+
+    <div id="mobilePanelBackdrop" class="mobilePanelBackdrop" hidden></div>
+    <section id="mobileToolsSheet" class="mobileToolsSheet" hidden aria-label="Mobile tools">
+      <div class="mobileSheetTitlebar">
+        <span>Tools</span>
+        <button id="mobileToolsClose" type="button" aria-label="Close mobile tools" title="Close mobile tools">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="mobileToolsGrid">
+        <button type="button" data-mobile-proxy="btnCrt"><i class="fa-solid fa-tv"></i><span>CRT</span></button>
+        <button type="button" data-mobile-proxy="btnTurbo"><i class="fa-solid fa-microchip"></i><span>Turbo</span></button>
+        <button type="button" data-mobile-proxy="btnFullscreen"><i class="fa-solid fa-expand"></i><span>Display</span></button>
+        <button type="button" data-mobile-proxy="btnAppFullscreen"><i class="fa-solid fa-window-maximize"></i><span>Workspace</span></button>
+        <button type="button" data-mobile-proxy="btnControlsCollapse"><i class="fa-solid fa-sliders"></i><span>Machine</span></button>
+        <button type="button" data-mobile-proxy="toolbarRom"><i class="fa-solid fa-microchip"></i><span>ROM</span></button>
+        <button type="button" data-mobile-proxy="btnDiskLibrary"><i class="fa-solid fa-hard-drive"></i><span>Library</span></button>
+        <button type="button" data-mobile-proxy="btnSnapshots"><i class="fa-solid fa-camera-retro"></i><span>Snapshots</span></button>
+        <button type="button" data-mobile-proxy="toolbarDiskOpen"><i class="fa-solid fa-floppy-disk"></i><span>Floppy A:</span></button>
+        <button type="button" data-mobile-proxy="btnSaveFloppy"><i class="fa-solid fa-download"></i><span>Save A:</span></button>
+      </div>
+    </section>
+    <nav id="mobileActionBar" class="mobileActionBar" aria-label="Mobile controls">
+      <button type="button" data-mobile-input="joystick" aria-label="Show joystick" title="Show joystick">
+        <i class="fa-solid fa-gamepad" aria-hidden="true"></i><span>Joystick</span>
+      </button>
+      <button type="button" data-mobile-input="keyboard" aria-label="Show keyboard" title="Show keyboard">
+        <i class="fa-solid fa-keyboard" aria-hidden="true"></i><span>Keyboard</span>
+      </button>
+      <button id="mobileToolsButton" type="button" aria-label="Open mobile tools" aria-expanded="false" title="Open mobile tools">
+        <i class="fa-solid fa-ellipsis" aria-hidden="true"></i><span>More</span>
+      </button>
+    </nav>
+
+    <section id="romNotice" class="romNotice" hidden role="dialog" aria-modal="false" aria-labelledby="romNoticeTitle" aria-describedby="romNoticeMessage">
+      <div class="romNoticeCard">
+        <button id="romNoticeClose" class="romNoticeClose" type="button" aria-label="Close ROM notice" title="Close ROM notice">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+        <div class="romNoticeHeading">
+          <i class="fa-solid fa-microchip" aria-hidden="true"></i>
+          <h2 id="romNoticeTitle">System ROM required</h2>
+        </div>
+        <p id="romNoticeMessage">Load a TOS or EmuTOS ROM image (192K) to start the emulator.</p>
+        <div class="romNoticeActions">
+          <button id="romNoticeLoad" class="romNoticeAction" type="button">
+            <i class="fa-solid fa-upload" aria-hidden="true"></i>
+            <span>Load ROM</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <script src="js/core/keymap.js"></script>
+    <script src="js/core/app_proxy.js"></script>
+    <script src="js/core/st_image.js"></script>
+    <script src="js/core/snapshot_codec.js"></script>
+    <script src="js/core/rom_library.js"></script>
+    <script src="js/core/library_archive.js"></script>
+    <script src="js/core/library_package.js"></script>
+    <script src="js/core/disk_library.js"></script>
+    <script src="js/app/keyboard.js"></script>
+    <script src="js/app/disk_library_ui.js"></script>
+    <script src="js/app/snapshot_ui.js"></script>
+    <script src="js/app/joystick.js"></script>
+    <script src="js/app/gamepad.js"></script>
+    <script src="js/app/ui.js"></script>
+    <script src="js/app/pce_st.js"></script>
+  </body>
 </html>

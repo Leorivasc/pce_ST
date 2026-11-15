@@ -1,0 +1,4778 @@
+@import url("vendor/fonts/fonts.css");
+
+:root {
+  color-scheme: dark;
+  --bg: #0d1117;
+  --panel: #161d2b;
+  --panel2: #131a26;
+  --text: #e6eefc;
+  --muted: #9db0d3;
+  --border: rgba(255, 255, 255, 0.09);
+  --accent: #5cc8ff;
+  --accent-rgb: 92, 200, 255;
+  --topbar-start: #1a2336;
+  --topbar-end: #0d1117;
+  --toolbar-start: rgba(25, 34, 52, 0.94);
+  --toolbar-end: rgba(16, 23, 36, 0.94);
+  --toolbar-input: rgba(8, 12, 20, 0.92);
+  --toolbar-group: rgba(8, 12, 20, 0.55);
+  --editor-input-bg: #061323;
+  --editor-bg: #0a1220;
+  --editor-gutter-bg: #08111e;
+  --snapshot-bg: #0f1725;
+  --snapshot-card-bg: rgba(255, 255, 255, 0.02);
+
+  /* Semantic state colors */
+  --state-ok: #4ade80;
+  --state-err: #f87171;
+  --danger: #c84030;
+
+  /* Font-size scale */
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-base: 13px;
+
+  /* Sub-panel palette (HostFS, Assembler, etc.) */
+  --sub-panel-bg: #141d2c;
+  --sub-panel-border: rgba(255, 255, 255, 0.08);
+  --sub-panel-header-bg: #111928;
+  --sub-panel-toolbar-bg: #101827;
+  --sub-panel-inner-border: rgba(255, 255, 255, 0.07);
+  --sub-panel-statusbar-bg: #0c1422;
+  --sub-panel-btn-idle: var(--muted);
+  --sub-panel-btn-radius: 4px;
+  --sub-panel-label: #7a90a8;
+  --sub-panel-dim: #4c6880;
+
+  /* Virtual keyboard palette */
+  --keyboard-bed: #202018;
+  --keyboard-bed-hi: #d5d5c8;
+  --keyboard-stripe: #200218;
+  --keyboard-key-top: #2d2d25;
+  --keyboard-key-mid: #282820;
+  --keyboard-legend: #cccccc;
+  --keyboard-legend-dim: #a7a79a;
+  --keyboard-metal: #b0b0b0;
+  --keyboard-metal-hi: #d0d0d0;
+}
+
+html[data-ui-theme="800xl"],
+html[data-ui-theme="xegs"],
+html[data-ui-theme="65xe"],
+html[data-ui-theme="400-800"],
+html[data-ui-theme="st"],
+html[data-ui-theme="2600"] {
+  color-scheme: light;
+}
+
+html[data-ui-theme="800xl"] {
+  --bg: #ffffff;
+  --panel: #f4f4f4;
+  --panel2: #e8e8e8;
+  --text: #555555;
+  --muted: #777777;
+  --border: rgba(0, 0, 0, 0.34);
+  --accent: #b3202a;
+  --accent-rgb: 179, 32, 42;
+  --topbar-start: #ffffff;
+  --topbar-end: #d0d0d0;
+  --toolbar-start: rgba(255, 255, 255, 0.98);
+  --toolbar-end: rgba(232, 232, 232, 0.98);
+  --toolbar-input: #ffffff;
+  --toolbar-group: rgba(58, 58, 58, 0.12);
+  --state-ok: #4f7957;
+  --state-err: #b3202a;
+  --danger: #8f1720;
+  --sub-panel-bg: #f4f4f4;
+  --sub-panel-border: rgba(0, 0, 0, 0.3);
+  --sub-panel-header-bg: #e8e8e8;
+  --sub-panel-toolbar-bg: #dedede;
+  --sub-panel-inner-border: rgba(0, 0, 0, 0.2);
+  --sub-panel-statusbar-bg: #d4d4d4;
+  --sub-panel-btn-idle: #666666;
+  --sub-panel-label: #555555;
+  --sub-panel-dim: #777777;
+  --keyboard-bed: #ffffff;
+  --keyboard-bed-hi: #f4f4f4;
+  --keyboard-stripe: #3a3a3a;
+  --keyboard-key-top: #f5f5f5;
+  --keyboard-key-mid: #d9d9d9;
+  --keyboard-legend: #4f4f4f;
+  --keyboard-legend-dim: #777777;
+  --keyboard-metal: #858585;
+  --keyboard-metal-hi: #d0d0d0;
+}
+
+html[data-ui-theme="xegs"] {
+  --bg: #f0ede4;
+  --panel: #d7d1c8;
+  --panel2: #e5dfd5;
+  --text: #484341;
+  --muted: #706864;
+  --border: rgba(72, 67, 65, 0.24);
+  --accent: #b83b31;
+  --accent-rgb: 184, 59, 49;
+  --topbar-start: #e5dfd5;
+  --topbar-end: #b9b1aa;
+  --toolbar-start: rgba(229, 223, 213, 0.96);
+  --toolbar-end: rgba(185, 177, 170, 0.96);
+  --toolbar-input: rgba(246, 241, 233, 0.96);
+  --toolbar-group: rgba(185, 177, 170, 0.5);
+  --state-ok: #5b8b58;
+  --state-err: #b83b31;
+  --danger: #96302a;
+  --sub-panel-bg: #e5dfd5;
+  --sub-panel-border: rgba(72, 67, 65, 0.22);
+  --sub-panel-header-bg: #d7d1c8;
+  --sub-panel-toolbar-bg: #c7beb5;
+  --sub-panel-inner-border: rgba(72, 67, 65, 0.18);
+  --sub-panel-statusbar-bg: #b9b1aa;
+  --sub-panel-btn-idle: #706864;
+  --sub-panel-label: #625c56;
+  --sub-panel-dim: #817870;
+  --keyboard-bed: #d7d1c8;
+  --keyboard-bed-hi: #e5dfd5;
+  --keyboard-stripe: #b9b1aa;
+  --keyboard-key-top: #ece7df;
+  --keyboard-key-mid: #d6d0c7;
+  --keyboard-legend: #484341;
+  --keyboard-legend-dim: #706864;
+  --keyboard-metal: #aeb3b7;
+  --keyboard-metal-hi: #d9dde0;
+}
+
+html[data-ui-theme="65xe"] {
+  --bg: #d9dadd;
+  --panel: #eef0f1;
+  --panel2: #aeb2b7;
+  --text: #1d2024;
+  --muted: #5e646b;
+  --border: rgba(44, 48, 53, 0.24);
+  --accent: #a33d2d;
+  --accent-rgb: 163, 61, 45;
+  --topbar-start: #f2f3f3;
+  --topbar-end: #aeb2b7;
+  --toolbar-start: rgba(238, 240, 241, 0.96);
+  --toolbar-end: rgba(174, 178, 183, 0.96);
+  --toolbar-input: rgba(249, 250, 250, 0.96);
+  --toolbar-group: rgba(174, 178, 183, 0.5);
+  --state-ok: #467650;
+  --state-err: #a33d2d;
+  --danger: #8f2f26;
+  --sub-panel-bg: #eef0f1;
+  --sub-panel-border: rgba(44, 48, 53, 0.22);
+  --sub-panel-header-bg: #c9cdd1;
+  --sub-panel-toolbar-bg: #b7bbc0;
+  --sub-panel-inner-border: rgba(44, 48, 53, 0.18);
+  --sub-panel-statusbar-bg: #aeb2b7;
+  --sub-panel-btn-idle: #5e646b;
+  --sub-panel-label: #51565b;
+  --sub-panel-dim: #70767d;
+  --keyboard-bed: #aeb2b7;
+  --keyboard-bed-hi: #eef0f1;
+  --keyboard-stripe: #8f9499;
+  --keyboard-key-top: #f0f1f0;
+  --keyboard-key-mid: #d7dadd;
+  --keyboard-legend: #25282b;
+  --keyboard-legend-dim: #62686e;
+  --keyboard-metal: #8f9499;
+  --keyboard-metal-hi: #cbd0d4;
+}
+
+html[data-ui-theme="400-800"] {
+  --bg: #d6c6a5;
+  --panel: #b2a07e;
+  --panel2: #eadfca;
+  --text: #3a3025;
+  --muted: #6f604b;
+  --border: rgba(58, 48, 37, 0.25);
+  --accent: #d47a2c;
+  --accent-rgb: 212, 122, 44;
+  --topbar-start: #efe4cf;
+  --topbar-end: #b2a07e;
+  --toolbar-start: rgba(234, 223, 202, 0.96);
+  --toolbar-end: rgba(178, 160, 126, 0.96);
+  --toolbar-input: rgba(255, 248, 232, 0.96);
+  --toolbar-group: rgba(178, 160, 126, 0.5);
+  --state-ok: #527545;
+  --state-err: #b44232;
+  --danger: #9e3325;
+  --sub-panel-bg: #eadfca;
+  --sub-panel-border: rgba(58, 48, 37, 0.22);
+  --sub-panel-header-bg: #d4c29d;
+  --sub-panel-toolbar-bg: #c2ae87;
+  --sub-panel-inner-border: rgba(58, 48, 37, 0.18);
+  --sub-panel-statusbar-bg: #b2a07e;
+  --sub-panel-btn-idle: #6f604b;
+  --sub-panel-label: #66553f;
+  --sub-panel-dim: #88765a;
+  --keyboard-bed: #3a3025;
+  --keyboard-bed-hi: #eadfca;
+  --keyboard-stripe: #5a402b;
+  --keyboard-key-top: #d8c6a4;
+  --keyboard-key-mid: #a88f68;
+  --keyboard-legend: #3a3025;
+  --keyboard-legend-dim: #6f604b;
+  --keyboard-metal: #a28d6b;
+  --keyboard-metal-hi: #d8c6a4;
+}
+
+html[data-ui-theme="st"] {
+  --bg: #c7bda7;
+  --panel: #a79e8e;
+  --panel2: #e0d8c8;
+  --text: #33383a;
+  --muted: #62605a;
+  --border: rgba(51, 56, 58, 0.24);
+  --accent: #a34632;
+  --accent-rgb: 163, 70, 50;
+  --topbar-start: #eee7d9;
+  --topbar-end: #a79e8e;
+  --toolbar-start: rgba(224, 216, 200, 0.96);
+  --toolbar-end: rgba(167, 158, 142, 0.96);
+  --toolbar-input: rgba(248, 243, 232, 0.96);
+  --toolbar-group: rgba(167, 158, 142, 0.5);
+  --state-ok: #4c7956;
+  --state-err: #a34632;
+  --danger: #8f3025;
+  --sub-panel-bg: #e0d8c8;
+  --sub-panel-border: rgba(51, 56, 58, 0.22);
+  --sub-panel-header-bg: #c7bda7;
+  --sub-panel-toolbar-bg: #b8ad9a;
+  --sub-panel-inner-border: rgba(51, 56, 58, 0.18);
+  --sub-panel-statusbar-bg: #a79e8e;
+  --sub-panel-btn-idle: #62605a;
+  --sub-panel-label: #5a5751;
+  --sub-panel-dim: #777168;
+  --keyboard-bed: #33383a;
+  --keyboard-bed-hi: #e0d8c8;
+  --keyboard-stripe: #5b554c;
+  --keyboard-key-top: #d8d0c0;
+  --keyboard-key-mid: #aba18f;
+  --keyboard-legend: #33383a;
+  --keyboard-legend-dim: #625f57;
+  --keyboard-metal: #96928a;
+  --keyboard-metal-hi: #d1ccc1;
+}
+
+html[data-ui-theme="2600"] {
+  --bg: #6f4428;
+  --panel: #9b673d;
+  --panel2: #4b2d1d;
+  --text: #f5e8c9;
+  --muted: #e0c79e;
+  --border: rgba(245, 232, 201, 0.2);
+  --accent: #d5aa5a;
+  --accent-rgb: 213, 170, 90;
+  --topbar-start: #9b673d;
+  --topbar-end: #4b2d1d;
+  --toolbar-start: rgba(115, 68, 39, 0.96);
+  --toolbar-end: rgba(75, 45, 29, 0.96);
+  --toolbar-input: rgba(23, 19, 17, 0.9);
+  --toolbar-group: rgba(23, 19, 17, 0.45);
+  --state-ok: #9aca6b;
+  --state-err: #e06b4e;
+  --danger: #e06b4e;
+  --sub-panel-bg: #4b2d1d;
+  --sub-panel-border: rgba(245, 232, 201, 0.18);
+  --sub-panel-header-bg: #6f4428;
+  --sub-panel-toolbar-bg: #5a351f;
+  --sub-panel-inner-border: rgba(245, 232, 201, 0.16);
+  --sub-panel-statusbar-bg: #3c2418;
+  --sub-panel-btn-idle: #e0c79e;
+  --sub-panel-label: #d5aa5a;
+  --sub-panel-dim: #b89569;
+  --keyboard-bed: #171311;
+  --keyboard-bed-hi: #9b673d;
+  --keyboard-stripe: #3c2418;
+  --keyboard-key-top: #6f4428;
+  --keyboard-key-mid: #4b2d1d;
+  --keyboard-legend: #f5e8c9;
+  --keyboard-legend-dim: #d5aa5a;
+  --keyboard-metal: #8f765a;
+  --keyboard-metal-hi: #d5aa5a;
+}
+
+html[data-ui-theme="800xl"],
+html[data-ui-theme="xegs"],
+html[data-ui-theme="65xe"],
+html[data-ui-theme="400-800"],
+html[data-ui-theme="st"],
+html[data-ui-theme="2600"] {
+  --editor-input-bg: var(--toolbar-input);
+  --editor-bg: var(--panel2);
+  --editor-gutter-bg: var(--sub-panel-toolbar-bg);
+  --snapshot-bg: var(--panel2);
+  --snapshot-card-bg: var(--panel);
+}
+
+html[data-ui-theme="800xl"] .topbar {
+  background: linear-gradient(180deg, var(--topbar-start) 0%, #f3f3f3 43%, var(--topbar-end) 100%);
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial,
+    "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.topbar {
+  position: relative;
+  z-index: 200;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--topbar-start), var(--topbar-end));
+  gap: 12px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.brand .title {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  line-height: 1.2;
+}
+
+.brand .titleRow {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.brandHelp {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  cursor: help;
+  vertical-align: baseline;
+}
+
+.brandHelp i {
+  font-size: 14px;
+}
+
+.brandHelp:focus-visible,
+.brandHelp:hover {
+  color: var(--accent);
+  outline: none;
+}
+
+.brandTooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 280px;
+  max-width: min(90vw, 420px);
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  text-align: left;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease-in;
+  z-index: 10;
+}
+
+.brandTooltip strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.brandTooltip em {
+  color: var(--muted);
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.brandTooltip .tt-meta {
+  font-size: var(--fs-xs);
+  opacity: 0.75;
+}
+
+.brandTooltip .tt-section {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.brandTooltip .tt-heading {
+  display: block;
+  margin-bottom: 4px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+}
+
+.brandTooltip .tt-row {
+  display: flex;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.brandTooltip .tt-key {
+  flex-shrink: 0;
+  min-width: 100px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.brandTooltip .tt-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.brandTooltip .tt-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+@media (max-width: 600px) {
+  .brandTooltip {
+    font-size: var(--fs-base);
+    line-height: 1.6;
+    padding: 16px;
+    max-width: 92vw;
+  }
+  .brandTooltip .tt-key {
+    min-width: 90px;
+  }
+}
+
+.brandHelp:focus-visible .brandTooltip,
+.brandHelp:hover .brandTooltip {
+  opacity: 1;
+}
+
+.brand .subtitle {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  flex: 1 1 520px;
+  min-width: min(100%, 420px);
+}
+
+.controlsPrimary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.primaryControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.controlsSecondary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.controlsSecondary[hidden] {
+  display: none;
+}
+
+.iconControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.iconControls button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+}
+
+.toolbarSelectWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: linear-gradient(180deg, var(--toolbar-start), var(--toolbar-end));
+  color: var(--text);
+  font-size: var(--fs-sm);
+}
+
+.toolbarSelectWrap span {
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.toolbarSelect {
+  min-width: 84px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--toolbar-input);
+  color: var(--text);
+  font: inherit;
+  padding: 8px 10px;
+}
+
+.toolbarSelectWide {
+  min-width: 160px;
+}
+
+.toolbarSelect:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.iconControlsPrimary {
+  gap: 6px;
+}
+
+.primaryControls > .primaryIconBtn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+}
+
+.layoutSchemeControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--toolbar-group);
+  flex-shrink: 0;
+}
+
+.layoutSchemeBtn {
+  width: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.layoutSchemeBtn:focus-visible {
+  color: var(--text);
+  border-color: var(--border);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+@media (hover: hover) {
+  .layoutSchemeBtn:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--border);
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.layoutSchemeBtn.active {
+  color: var(--text);
+  border-color: rgba(var(--accent-rgb), 0.55);
+  background: rgba(var(--accent-rgb), 0.16);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.08);
+}
+
+.toolbarCollapseBtn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+.toolbarCollapseBtn:focus-visible {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border);
+}
+
+@media (hover: hover) {
+  .toolbarCollapseBtn:hover:not(:disabled) {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--border);
+  }
+}
+
+button {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+button i {
+  font-size: 16px;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.primaryIconBtn.pending:disabled {
+  opacity: 1;
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.65);
+  background: rgba(var(--accent-rgb), 0.12);
+  cursor: wait;
+}
+
+button:active:not(:disabled) {
+  border-color: rgba(var(--accent-rgb), 0.55);
+  background: rgba(var(--accent-rgb), 0.12);
+}
+
+.romNotice[hidden] {
+  display: none;
+}
+
+.romNotice {
+  position: fixed;
+  z-index: 500;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: clamp(24px, 10vh, 88px) 16px 24px;
+  background: rgba(5, 8, 14, 0.68);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.romNoticeCard {
+  position: relative;
+  width: min(100%, 500px);
+  padding: 24px;
+  border: 1px solid rgba(var(--accent-rgb), 0.35);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #1a2538, #121a29);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+  color: var(--text);
+}
+
+.romNoticeClose {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border-color: transparent;
+}
+
+.romNoticeClose:hover:not(:disabled),
+.romNoticeClose:focus-visible {
+  color: var(--text);
+  border-color: var(--border);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.romNoticeHeading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 34px;
+}
+
+.romNoticeHeading > i {
+  color: var(--accent);
+  font-size: 20px;
+}
+
+.romNoticeHeading h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.romNoticeCard p {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+}
+
+.romNoticeActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.romNoticeAction {
+  flex: 1 1 180px;
+  gap: 8px;
+  min-height: 42px;
+  border-color: rgba(var(--accent-rgb), 0.45);
+  background: rgba(var(--accent-rgb), 0.12);
+}
+
+.romNoticeAction:hover:not(:disabled),
+.romNoticeAction:focus-visible {
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.2);
+}
+
+.romNoticeHint {
+  font-size: var(--fs-sm) !important;
+  opacity: 0.85;
+}
+
+@media (hover: hover) {
+  button:hover:not(:disabled) {
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+}
+
+/* Toggle buttons */
+.toggle-btn {
+  opacity: 0.5;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+
+.toggle-btn.active {
+  opacity: 1;
+  border-color: var(--border);
+}
+
+@media (hover: hover) {
+  .toggle-btn:hover:not(:disabled) {
+    opacity: 1;
+  }
+}
+
+/* Turbo badge - only show when active */
+.turbo-stack {
+  position: relative;
+}
+
+.turbo-badge {
+  display: none;
+  position: absolute;
+  right: -0.18em;
+  bottom: -0.14em;
+  font-size: 0.65em;
+  line-height: 1;
+  color: #ef4444;
+}
+
+.toggle-btn.active .turbo-badge {
+  display: inline-block;
+}
+
+/* Audio icons - swap based on state */
+.audio-off {
+  display: none;
+}
+
+.toggle-btn:not(.active) .audio-off {
+  display: inline;
+}
+
+.toggle-btn:not(.active) .audio-on {
+  display: none;
+}
+
+.crt-stack {
+  position: relative;
+}
+
+.crt-off-mark {
+  display: none;
+  position: absolute;
+  right: -0.04em;
+  bottom: -0.08em;
+  font-size: 0.8em;
+  color: #ef4444;
+}
+
+.toggle-btn:not(.active) .crt-off-mark {
+  display: inline;
+}
+
+.joystick-stack {
+  position: relative;
+}
+
+.joystick-off-mark {
+  position: absolute;
+  right: -0.04em;
+  bottom: -0.08em;
+  font-size: 0.8em;
+  color: #ef4444;
+}
+
+.toggle-btn.active .joystick-off-mark {
+  display: none;
+}
+
+.keyboard-stack {
+  position: relative;
+}
+
+.keyboard-off-mark {
+  position: absolute;
+  right: -0.04em;
+  bottom: -0.08em;
+  font-size: 0.8em;
+  color: #ef4444;
+}
+
+.toggle-btn.active .keyboard-off-mark {
+  display: none;
+}
+
+.chk {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-base);
+  color: var(--muted);
+}
+
+.chk i {
+  font-size: 14px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "screen"
+    "input"
+    "tools";
+  align-content: start;
+  padding: 14px;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  gap: 10px;
+}
+
+.layout[data-layout-scheme="work"],
+.layout[data-layout-scheme="development"] {
+  grid-template-columns: minmax(240px, var(--tools-column-width, 34%)) 10px minmax(320px, 1fr);
+  grid-template-areas:
+    "tools splitter screen"
+    "input input input";
+  align-items: start;
+  column-gap: 0;
+}
+
+.screenPanel {
+  grid-area: screen;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.inputPanelRow {
+  grid-area: input;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.34fr);
+  align-items: start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.inputPanelRow > #keyboardPanel {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.inputPanelRow > #joystickPanel {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.layoutTools {
+  grid-area: tools;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.layoutSplitter {
+  grid-area: splitter;
+  display: none;
+  align-self: stretch;
+  justify-self: stretch;
+  min-height: 180px;
+  align-items: center;
+  justify-content: center;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+  outline: none;
+}
+
+.layoutSplitter > span {
+  display: block;
+  width: 2px;
+  height: 100%;
+  min-height: 180px;
+  border-radius: 999px;
+  background: var(--sub-panel-border);
+  transition: width 120ms ease, background 120ms ease;
+}
+
+.layoutSplitter:hover > span,
+.layoutSplitter:focus-visible > span,
+body.layout-column-resizing .layoutSplitter > span {
+  width: 4px;
+  background: var(--accent);
+}
+
+.layout[data-layout-scheme="work"] > .layoutSplitter,
+.layout[data-layout-scheme="development"] > .layoutSplitter {
+  display: flex;
+}
+
+body.layout-column-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.layoutTools > .disklibPanel,
+.layoutTools > .hostfsPanel,
+.layoutTools > .assemblerPanel,
+.layoutTools > .snapshotPanel {
+  width: 100%;
+  max-width: none;
+  margin-top: 0;
+  align-self: stretch;
+}
+
+.layout[data-layout-scheme="development"] .assemblerPanel {
+  height: clamp(280px, 46vh, 620px);
+  min-height: 280px;
+  max-height: 70vh;
+}
+
+.layout[data-layout-scheme="development"] .layoutTools > #assemblerPanel {
+  order: 1;
+}
+
+.layout[data-layout-scheme="development"] .layoutTools > #hostfsPanel {
+  order: 2;
+}
+
+.layout[data-layout-scheme="development"] .layoutTools > #diskLibraryPanel {
+  order: 3;
+}
+
+.screenViewport {
+  width: 100%;
+  min-width: 0;
+  min-height: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: transparent;
+  position: relative;
+}
+
+.screenOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.disk-activity {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3;
+  pointer-events: none;
+  width: 34px;
+  height: 23px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid currentColor;
+  border-radius: 2px;
+  background: rgba(9, 18, 32, 0.75);
+  box-shadow: 0 1px 7px rgba(0, 0, 0, 0.55);
+  color: #ffe04b;
+  font: 600 12px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: 0.03em;
+  opacity: 0;
+  transform: translateY(2px);
+}
+
+.disk-activity.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.disk-activity-read {
+  border-color: #ffe04b;
+  color: #ffe04b;
+  background: rgba(255, 210, 48, 0.2);
+}
+
+.disk-activity-write {
+  border-color: #ff9d2e;
+  color: #ff9d2e;
+  background: rgba(255, 132, 28, 0.22);
+}
+
+.disk-activity-pulse-0,
+.disk-activity-pulse-1 {
+  animation: disk-activity-blink 180ms steps(1, end) 4;
+}
+
+@keyframes disk-activity-blink {
+  0%,
+  100% {
+    filter: brightness(0.85);
+    opacity: 0.55;
+  }
+  50% {
+    filter: brightness(1.65);
+    opacity: 1;
+  }
+}
+
+.screenViewport.drag-over {
+  outline: 3px dashed var(--accent);
+  outline-offset: -3px;
+}
+
+.screenViewport.drag-over canvas {
+  opacity: 0.6;
+}
+
+/* NOTE: these must be SEPARATE rules. A selector list is invalidated in full if
+   any selector in it is unknown to the browser, so grouping :fullscreen with the
+   prefixed :-webkit-full-screen would drop the whole rule in Firefox (and the
+   reverse in older WebKit). Keep one rule per pseudo-class. */
+.screenViewport:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  background: transparent;
+  padding: 0;
+}
+.screenViewport:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  background: transparent;
+  padding: 0;
+}
+
+html:fullscreen {
+  background: var(--bg);
+}
+html:-webkit-full-screen {
+  background: var(--bg);
+}
+html:fullscreen body {
+  min-height: 100vh;
+  overflow: auto;
+}
+html:-webkit-full-screen body {
+  min-height: 100vh;
+  overflow: auto;
+}
+html:fullscreen .layout {
+  min-height: 100vh;
+}
+html:-webkit-full-screen .layout {
+  min-height: 100vh;
+}
+
+.keyboardPanel {
+  width: min(100%, 1083px);
+  border: 0;
+  border-radius: 0;
+  padding: 8px 0 18px;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  align-self: center;
+}
+
+.keyboardPanel[hidden] {
+  display: none;
+}
+
+.joystickPanel {
+  width: min(100%, 500px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 10px;
+  background: linear-gradient(180deg, #2f2f2f 0%, #272727 100%);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  align-self: center;
+}
+
+.joystickPanel[hidden] {
+  display: none;
+}
+
+.joystickPanelInner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2px;
+}
+
+.cx40 {
+  width: 352px;
+  height: 352px;
+  position: relative;
+  filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.55));
+}
+
+.cx40-base {
+  width: 100%;
+  height: 100%;
+  background: #1a1a1a;
+  border-radius: 53px;
+  position: relative;
+  box-shadow:
+    inset 0 4px 10px rgba(255, 255, 255, 0.1),
+    10px 30px 60px rgba(0, 0, 0, 0.6),
+    0 0 0 2px #111;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  touch-action: none;
+  user-select: none;
+}
+
+.cx40-cable {
+  position: absolute;
+  top: -35px;
+  right: 70px;
+  width: 11px;
+  height: 44px;
+  background: #2a2a2a;
+  border-radius: 6px 6px 0 0;
+  box-shadow: inset -3px 0 5px rgba(0, 0, 0, 0.5);
+}
+
+.cx40-markings-ring {
+  position: absolute;
+  top: 55%;
+  left: 50%;
+  width: 246px;
+  height: 246px;
+  transform: translate(-50%, -50%);
+  border: 4px dashed #ff7b00;
+  border-radius: 50%;
+  opacity: 0.8;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.cx40-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 11px solid #ff7b00;
+}
+
+.cx40-arrow-up {
+  top: 9px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.cx40-arrow-down {
+  bottom: 9px;
+  left: 50%;
+  transform: translateX(-50%) rotate(180deg);
+}
+
+.cx40-arrow-left {
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-90deg);
+}
+
+.cx40-arrow-right {
+  right: 9px;
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+}
+
+.cx40-top-label {
+  position: absolute;
+  top: 55%;
+  left: 50%;
+  transform: translate(-50%, -50%) translateY(-135px);
+  font-size: 12px;
+  font-weight: 700;
+  color: #ff7b00;
+  font-family: "Roboto Condensed", "Courier New", monospace;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.cx40-fire-housing {
+  position: absolute;
+  top: 22px;
+  left: 30px;
+  width: 46px;
+  height: 46px;
+  z-index: 12;
+}
+
+.cx40-fire-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: none;
+  background: radial-gradient(circle at 30% 30%, #ff5f52, #a31100);
+  box-shadow:
+    0 4px 0 #7a0d00,
+    0 6px 15px rgba(0, 0, 0, 0.5);
+  transition: transform 0.1s, box-shadow 0.1s;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+}
+
+.cx40-fire-btn:active,
+.cx40-fire-btn.active {
+  transform: translateY(3px);
+  box-shadow:
+    0 1px 0 #7a0d00,
+    0 2px 5px rgba(0, 0, 0, 0.5);
+  background: radial-gradient(circle at 30% 30%, #e6453a, #8a0e00);
+}
+
+.cx40-boot {
+  position: absolute;
+  top: 55%;
+  left: 50%;
+  width: 176px;
+  height: 176px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: repeating-radial-gradient(
+    circle,
+    #181818,
+    #181818 10px,
+    #080808 12px,
+    #080808 15px
+  );
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.cx40-stick-area {
+  width: 70px;
+  height: 70px;
+  position: relative;
+  z-index: 10;
+  cursor: grab;
+  transition: transform 0.05s linear;
+}
+
+.cx40-stick-area.grabbing {
+  cursor: grabbing;
+  transition: none;
+}
+
+.cx40-stick-hex {
+  width: 70px;
+  height: 70px;
+  background: #2a2a2a;
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  box-shadow:
+    inset 0 5px 10px rgba(255, 255, 255, 0.1),
+    inset 0 -5px 10px rgba(0, 0, 0, 0.5);
+  position: absolute;
+}
+
+.cx40-stick-hex::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 35px;
+  height: 35px;
+  transform: translate(-50%, -50%);
+  background: #222;
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  box-shadow: inset 0 2px 5px rgba(255, 255, 255, 0.05);
+}
+
+.cx40-stick-shaft {
+  position: absolute;
+  width: 53px;
+  height: 53px;
+  background: #1a1a1a;
+  border-radius: 50%;
+  top: 9px;
+  left: 9px;
+  z-index: -1;
+}
+
+.cx40-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 176px;
+  height: 176px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.cx40-glow.up {
+  background: linear-gradient(to bottom, rgba(255, 123, 0, 0.2) 0%, transparent 46%);
+}
+
+.cx40-glow.down {
+  background: linear-gradient(to top, rgba(255, 123, 0, 0.2) 0%, transparent 46%);
+}
+
+.cx40-glow.left {
+  background: linear-gradient(to right, rgba(255, 123, 0, 0.2) 0%, transparent 46%);
+}
+
+.cx40-glow.right {
+  background: linear-gradient(to left, rgba(255, 123, 0, 0.2) 0%, transparent 46%);
+}
+
+.cx40-glow.active {
+  opacity: 1;
+}
+
+.atariKeyboard {
+  --bed: var(--keyboard-bed);
+  --bed-hi: var(--keyboard-bed-hi);
+  --stripe: var(--keyboard-stripe);
+  --key-top: var(--keyboard-key-top);
+  --key-mid: var(--keyboard-key-mid);
+  --legend: var(--keyboard-legend);
+  --legend-dim: var(--keyboard-legend-dim);
+  --metal: var(--keyboard-metal);
+  --metal-hi: var(--keyboard-metal-hi);
+  --gap: clamp(2px, 0.45vw, 5px);
+  --key-h: clamp(29px, calc(3.8vw + 13px), 52px);
+  --radius: clamp(12px, 1.9vw, 20px);
+  --shell-pad-x: clamp(6px, 1.6vw, 16px);
+  --shell-pad-top: clamp(18px, 4.3vw, 50px);
+  --shell-pad-bottom: clamp(8px, 2.4vw, 20px);
+  --deck-pad-x: clamp(0px, 0.35vw, 4px);
+  --deck-pad-top: clamp(0px, 0.35vw, 4px);
+  --deck-pad-bottom: clamp(0px, 0.35vw, 4px);
+  --main-pad-bottom: 0px;
+  --side-pad-x: clamp(3px, 0.9vw, 10px);
+  --key-font: clamp(6px, 1.25vw, 14px);
+  --key-font-wide: clamp(5px, 1.02vw, 11px);
+  --side-key-w: clamp(16px, 4.2vw, 48px);
+  --side-band-w: var(--side-key-w);
+  --side-key-h: var(--key-h);
+  --side-key-gap: var(--gap);
+  --side-band-top: 0px;
+  --side-band-bottom: var(--shell-pad-bottom);
+  --legend-font: "Exo 2", "Roboto Condensed", "Segoe UI", system-ui, sans-serif;
+  --mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  min-width: 0;
+  width: min(100%, 1083px);
+  margin-inline: auto;
+  color: var(--legend);
+  font-family: var(--legend-font);
+}
+
+.atariKeyboard .atari {
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: linear-gradient(
+    to bottom,
+    var(--bed-hi) 0%,
+    var(--bed-hi) 13%,
+    var(--stripe) 14%,
+    var(--bed) 15%,
+    var(--bed) 100%
+  );
+  box-shadow:
+    0 8px 0 #060603,
+    0 16px 50px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  grid-template-rows: auto 1fr;
+}
+
+.atariKeyboard .chassis-label {
+  height: var(--shell-pad-top);
+  padding: 0 var(--shell-pad-x);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  grid-column: 1 / 4;
+  user-select: none;
+  /* Explicitly paint cream so the gradient below it is not relied upon for
+     colour, then add the thin dark stripe at the bottom — matching KLE's
+     #200218 separator band which is otherwise too narrow to render reliably. */
+  background: var(--bed-hi);
+  border-bottom: clamp(2px, 0.4vw, 4px) solid var(--stripe);
+  box-sizing: border-box;
+}
+
+.atariKeyboard .chassis-label .kbname {
+  color: #555555;
+  font-size: clamp(6px, 0.9vw, 10px);
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+}
+
+.atariKeyboard .chassis-label .kbauthor {
+  color: #888888;
+  font-size: clamp(6px, 0.78vw, 9px);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.atariKeyboard .case-keyboard {
+  grid-row: 2;
+  padding: 0 var(--shell-pad-x) var(--shell-pad-bottom);
+  background: transparent;
+  border-radius: 0 0 0 var(--radius);
+}
+
+.atariKeyboard .deck {
+  padding: var(--deck-pad-top) var(--deck-pad-x) var(--deck-pad-bottom);
+}
+
+.atariKeyboard .main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding-bottom: var(--main-pad-bottom);
+}
+
+.atariKeyboard .row {
+  display: flex;
+  gap: var(--gap);
+  align-items: stretch;
+}
+
+.atariKeyboard .spacer {
+  flex: var(--w, 1) 0 0;
+  min-width: 0;
+}
+
+.atariKeyboard .key {
+  flex: var(--w, 1) 0 0;
+  min-width: 0;
+  box-sizing: border-box;
+  height: var(--key-h);
+  border-radius: clamp(5px, 1.1vw, 14px);
+  border-top:    1px solid #323228;
+  border-left:   1px solid #323228;
+  border-right:  1px solid #111110;
+  border-bottom: 3px solid #111110;
+  background: var(--key-mid);
+  box-shadow: none;
+  color: var(--legend);
+  font-family: var(--legend-font);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  touch-action: manipulation;
+  padding: 4px 6px;
+  display: grid;
+  place-items: center;
+  outline: none;
+  text-transform: uppercase;
+  font-size: var(--key-font);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition: filter .06s, transform .06s, border-bottom-width .06s;
+  /* creates own stacking context so the pseudo keycap layers sit above the key background
+     but below all in-flow text content (letter keys like "A" that have no .leg wrapper) */
+  z-index: 0;
+}
+
+/* DCS inner keycap face — all keys except spacebar */
+.atariKeyboard .key::before {
+  content: "";
+  position: absolute;
+  inset: 2px 3px 5px 3px;
+  background: var(--key-top);
+  border-radius: clamp(4px, 0.9vw, 12px);
+  pointer-events: none;
+  z-index: -2;
+}
+
+.atariKeyboard .key::after {
+  content: "";
+  position: absolute;
+  inset: 2px 3px 5px 3px;
+  border-radius: clamp(4px, 0.9vw, 12px);
+  background-image: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(0, 0, 0, 0.06) 40%,
+    rgba(0, 0, 0, 0.06) 60%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+
+.atariKeyboard .key .leg {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  align-items: center;
+  justify-items: center;
+  gap: 0;
+  padding: 1px 0;
+  text-align: center;
+  letter-spacing: 0.02em;
+  position: relative;
+  z-index: 2;
+}
+
+.atariKeyboard .key .top {
+  font-size: clamp(3px, 0.9vw, 9px);
+  color: var(--legend-dim);
+  line-height: 1;
+}
+
+.atariKeyboard .whiteback {
+  background: #ffffff;
+  color: #000000 !important;
+  border-radius: 2px;
+  padding: 1px 3px;
+  text-align: center;
+  font-weight: 700;
+  line-height: 1.35;
+  display: inline-block;
+  font-size: clamp(4px, 0.74vw, 8px);
+}
+
+.atariKeyboard .whiteback.arrowbadge {
+  min-width: 1.2em;
+  padding: 1px 3px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.atariKeyboard .whiteback.arrowbadge .fa-solid {
+  font-size: clamp(4px, 0.72vw, 8px);
+  line-height: 1;
+}
+
+.atariKeyboard .key .mainlbl {
+  font-size: clamp(4px, 1.3vw, 14px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.atariKeyboard .key .sublbl {
+  font-size: clamp(2px, 0.78vw, 8px);
+  color: var(--legend);
+  opacity: 0.92;
+  line-height: 1.05;
+}
+
+/* CONTROL key: whiteback badge at top-left (matches reference a:4 slot-0 position) */
+.atariKeyboard .key .leg-tl {
+  position: absolute;
+  top: 6px;
+  left: 7px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* TAB key: CLR badge top-left, SET top-right, TAB spanning full width at bottom */
+.atariKeyboard .tabkey .leg {
+  grid-template-rows: 1fr 1fr;
+  grid-template-columns: auto 1fr;
+  justify-items: center;
+  row-gap: clamp(1px, 0.5vw, 5px);
+}
+
+.atariKeyboard .tabkey .leg .top {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  padding-right: 2px;
+}
+
+.atariKeyboard .tabkey .leg .mainlbl {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+}
+
+.atariKeyboard .tabkey .leg .sublbl {
+  grid-column: 1 / 3;
+  grid-row: 2;
+  align-self: center;
+}
+
+/* Arrow keys: badge top-left, main top-right, sub bottom-right */
+.atariKeyboard .arrowkey .leg {
+  grid-template-rows: 1fr 1fr;
+  grid-template-columns: auto 1fr;
+  justify-items: center;
+  row-gap: clamp(1px, 0.5vw, 5px);
+}
+
+.atariKeyboard .arrowkey .leg .top {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  padding-right: 2px;
+}
+
+.atariKeyboard .arrowkey .leg .mainlbl {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+}
+
+.atariKeyboard .arrowkey .leg .sublbl {
+  grid-column: 1 / 3;
+  grid-row: 2;
+  align-self: center;
+}
+
+.atariKeyboard .key.small .mainlbl {
+  font-size: clamp(3px, 1.1vw, 13px);
+}
+
+.atariKeyboard .key.wide .mainlbl {
+  letter-spacing: 0.05em;
+}
+
+.atariKeyboard .key.wide {
+  font-size: var(--key-font-wide);
+  letter-spacing: 0.03em;
+}
+
+/* Desktop-only sizing (above mobile breakpoint).
+   Mobile retains its own sizes from the @media (max-width: 780px) block. */
+@media (min-width: 781px) {
+  /* Plain letter keys (A-Z etc.) — match KLE's f:9 proportional size (~37% of
+     key width). Keys with .leg children (.top/.mainlbl) have their own explicit
+     font-size rules that override this inheritance, so number keys are unaffected. */
+  .atariKeyboard .key:not(.small):not(.wide) {
+    font-size: clamp(7px, 1.7vw, 20px);
+  }
+
+  /* Word-label small keys (ESC, BREAK, etc.) — at narrow desktop widths the
+     spacers are active and keys shrink to ~32px; reduce font and inline padding
+     so 5-letter words like BREAK still fit without clipping. Wide small keys
+     (CONTROL, CAPS, RETURN, SHIFT) are wide enough and excluded. */
+  .atariKeyboard .key.small:not(.wide) {
+    font-size: clamp(5px, 0.9vw, 13px);
+    padding-inline: clamp(1px, 0.4vw, 6px);
+  }
+}
+
+.atariKeyboard .key:not(.active):hover {
+  filter: brightness(1.18);
+}
+
+.atariKeyboard .key.pressed,
+.atariKeyboard .key:active,
+.atariKeyboard .key.active {
+  transform: translateY(3px);
+  border-bottom-width: 1px;
+  filter: brightness(0.82) drop-shadow(0 0 6px rgba(255, 170, 80, 0.45));
+}
+
+.atariKeyboard .case-side {
+  grid-column: 2;
+  grid-row: 2;
+  width: var(--side-band-w);
+  /* Gist places the silver function strip one key-unit to the right of the main
+     block (BREAK ends at x:16.25, the silver keys start at x:17.25). The main
+     block's right padding already supplies part of that gap, so make up the rest
+     here so the total clears exactly one main key unit (--side-key-w). */
+  margin-left: max(
+    0px,
+    calc(var(--side-key-w) - var(--shell-pad-x) - var(--deck-pad-x))
+  );
+  background: transparent;
+  border: 0;
+  padding: 0;
+  position: relative;
+  z-index: 0;
+}
+
+
+.atariKeyboard .case-side::before,
+.atariKeyboard .case-side::after {
+  display: none;
+}
+
+.atariKeyboard .side-keys {
+  display: flex;
+  flex-direction: column;
+  gap: var(--side-key-gap);
+  width: 100%;
+  /* Align first side-key with the first main key row.
+     The main block is offset by deck-pad-top inside .deck; match it here. */
+  padding-top: var(--deck-pad-top);
+}
+
+.atariKeyboard .side-key {
+  height: var(--side-key-h);
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: clamp(3px, 0.6vw, 7px);
+  border: 1px solid #999999;
+  background: var(--metal);
+  box-shadow: none;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  outline: none;
+  padding: 0;
+  transition: filter .06s, transform .06s, border-bottom-width .06s;
+  z-index: 0;
+}
+
+.atariKeyboard .side-key::before,
+.atariKeyboard .side-key::after {
+  display: none;
+}
+
+.atariKeyboard .side-key:not(.active):hover {
+  filter: brightness(1.18);
+}
+
+.atariKeyboard .side-key.pressed,
+.atariKeyboard .side-key:active,
+.atariKeyboard .side-key.active {
+  transform: translateY(2px);
+  filter: brightness(0.88) drop-shadow(0 0 5px rgba(200, 200, 180, 0.35));
+}
+
+.atariKeyboard .case-strip {
+  grid-column: 3;
+  grid-row: 2;
+  padding: var(--deck-pad-top) var(--side-pad-x) var(--shell-pad-bottom) 0;
+  display: flex;
+  align-items: flex-start;
+}
+
+.atariKeyboard .strip {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-left: 0;
+  width: var(--side-key-w);
+}
+
+.atariKeyboard .strip-label {
+  height: var(--side-key-h);
+  margin-bottom: var(--side-key-gap);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font: 700 clamp(3px, 0.86vw, 10px) / 1 var(--legend-font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  user-select: none;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.atariKeyboard .strip-label:last-child {
+  margin-bottom: 0;
+}
+
+
+.atariKeyboard .kbKey:focus-visible {
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.26),
+    0 2px 0 rgba(0, 0, 0, 0.58),
+    0 4px 8px rgba(0, 0, 0, 0.24);
+}
+
+.atariKeyboard .side-key.kbKey:focus-visible {
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.25),
+    0 2px 0 rgba(0, 0, 0, 0.26),
+    0 4px 8px rgba(0, 0, 0, 0.18);
+}
+
+@media (max-width: 780px) {
+  .atariKeyboard {
+    width: 100%;
+    /* mobile-tuned variables — scale proportionally with viewport */
+    --key-h: clamp(28px, 7vw, 44px);
+    --gap: clamp(1.5px, 0.5vw, 4px);
+    --radius: clamp(8px, 2.4vw, 16px);
+    --shell-pad-x: clamp(4px, 1.6vw, 12px);
+    --shell-pad-top: clamp(10px, 3.2vw, 28px);
+    --shell-pad-bottom: clamp(4px, 1.6vw, 12px);
+    --deck-pad-x: clamp(0px, 0.3vw, 3px);
+    --deck-pad-top: clamp(0px, 0.3vw, 3px);
+    --deck-pad-bottom: clamp(0px, 0.3vw, 3px);
+    --side-pad-x: clamp(3px, 1vw, 8px);
+    --key-font: clamp(7px, 2.6vw, 12px);
+    --key-font-wide: clamp(5.5px, 2vw, 10px);
+  }
+  .atariKeyboard .atari {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+    /* On mobile the board is much taller, so the gradient's %-based cream stop
+       bleeds behind the first key rows. The chassis-label already paints its own
+       cream background + stripe border, so use solid dark here instead. */
+    background: var(--bed);
+    box-shadow:
+      0 clamp(3px, 1vw, 8px) 0 #060603,
+      0 clamp(6px, 2vw, 16px) clamp(16px, 5vw, 50px) rgba(0, 0, 0, 0.9),
+      inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  }
+  /* collapse decorative spacers — reclaims ~1 key-unit of width per row */
+  .atariKeyboard .row > .spacer {
+    flex: 0 0 0;
+    min-width: 0;
+  }
+  .atariKeyboard .chassis-label {
+    grid-column: 1;
+    height: clamp(14px, 5vw, 28px);
+  }
+  .atariKeyboard .chassis-label .kbname {
+    font-size: clamp(6px, 1.8vw, 10px);
+    letter-spacing: 0.22em;
+  }
+  .atariKeyboard .chassis-label .kbauthor {
+    font-size: clamp(6px, 1.5vw, 9px);
+    letter-spacing: 0.07em;
+  }
+  .atariKeyboard .key {
+    font-size: clamp(7px, 2.6vw, 12px);
+    padding: clamp(2px, 0.5vw, 4px) clamp(1px, 0.5vw, 5px);
+    border-bottom-width: clamp(2px, 0.6vw, 4px);
+    border-radius: clamp(2px, 0.5vw, 5px);
+  }
+  .atariKeyboard .key::before {
+    inset: clamp(1px, 0.4vw, 3px) clamp(2px, 0.5vw, 5px) clamp(3px, 0.8vw, 7px) clamp(2px, 0.5vw, 5px);
+    border-radius: clamp(1px, 0.4vw, 3px);
+  }
+  .atariKeyboard .key::after {
+    inset: clamp(1px, 0.4vw, 3px) clamp(2px, 0.5vw, 5px) clamp(3px, 0.8vw, 7px) clamp(2px, 0.5vw, 5px);
+    border-radius: clamp(1px, 0.4vw, 3px);
+  }
+  /* contain text overflow inside each key */
+  .atariKeyboard .key .leg {
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+  }
+  /* Clip cleanly (no ellipsis "…") if a label is ever marginally too wide;
+     the per-label font sizes below are tuned so labels actually fit down to
+     ~320px, so this is just a safety net. */
+  .atariKeyboard .key .top,
+  .atariKeyboard .key .mainlbl,
+  .atariKeyboard .key .sublbl {
+    overflow: hidden;
+    max-width: 100%;
+  }
+  /* primary label: numbers and single symbols — keep prominent */
+  .atariKeyboard .key .mainlbl {
+    font-size: clamp(8px, 2.8vw, 16px);
+  }
+  /* shifted chars on number keys (!, @, #) — readable single chars */
+  .atariKeyboard .key .top {
+    font-size: clamp(5.5px, 2vw, 10px);
+  }
+  /* word labels on .small keys (CLEAR, INSERT, DELETE) — must fit a 1u key */
+  .atariKeyboard .key.small .top {
+    font-size: clamp(3px, 1vw, 7px);
+  }
+  .atariKeyboard .key .sublbl {
+    font-size: clamp(3px, 1.1vw, 8px);
+  }
+  /* .small keys: mostly single symbols (<, >, _, |) plus the word "BACK"/"SET",
+     so size to fit the widest of those in a 1u key */
+  .atariKeyboard .key.small .mainlbl {
+    font-size: clamp(4.5px, 1.5vw, 11px);
+  }
+  /* small keys with direct text (ESC, BREAK) — size to fit "BREAK" in 1u */
+  .atariKeyboard .key.small {
+    font-size: clamp(4px, 1.2vw, 11px);
+    letter-spacing: 0;
+  }
+  /* wide label keys (RETURN, SHIFT, CAPS) — size to fit "RETURN" in 1.5u */
+  .atariKeyboard .key.wide {
+    font-size: clamp(4px, 1.5vw, 10px);
+    letter-spacing: 0;
+    overflow: hidden;
+  }
+  .atariKeyboard .key .leg-tl {
+    top: clamp(2px, 0.5vw, 6px);
+    left: clamp(2px, 0.6vw, 7px);
+  }
+  .atariKeyboard .whiteback {
+    font-size: clamp(4px, 1.2vw, 8px);
+    padding: 0.5px 2px;
+  }
+  .atariKeyboard .whiteback.arrowbadge {
+    min-width: 0.95em;
+    padding: 0.04em 0.1em;
+    border-radius: 1px;
+  }
+  .atariKeyboard .whiteback.arrowbadge .fa-solid {
+    font-size: clamp(3.5px, 1.1vw, 7px);
+  }
+  .atariKeyboard .key.pressed,
+  .atariKeyboard .key:active,
+  .atariKeyboard .key.active {
+    transform: translateY(clamp(1px, 0.4vw, 3px));
+  }
+  .atariKeyboard .case-side {
+    grid-column: 1;
+    grid-row: 3;
+    width: auto;
+    /* The 1-unit gap only applies to the side-by-side desktop layout; here the
+       strip wraps to its own full-width row below the keyboard. */
+    margin-left: 0;
+    padding: clamp(4px, 1.4vw, 12px) var(--side-pad-x) clamp(4px, 1.4vw, 12px);
+    border-left: 0;
+    border-bottom: 1px solid #888888;
+    border-top: 1px solid rgba(0, 0, 0, 0.25);
+    border-radius: 0;
+  }
+  .atariKeyboard .case-side::before {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    border-left: 0;
+    border-bottom: 1px solid #888888;
+    border-top: 1px solid rgba(0, 0, 0, 0.25);
+    border-right: 1px solid #888888;
+    border-radius: 0;
+  }
+  .atariKeyboard .case-side::after {
+    top: 2px;
+    right: 3px;
+    bottom: clamp(2px, 0.6vw, 5px);
+    left: 3px;
+    border-radius: 2px;
+  }
+  .atariKeyboard .case-keyboard {
+    grid-row: 2;
+    border-radius: 0;
+  }
+  .atariKeyboard .side-keys {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--gap);
+    padding-top: 0;
+    padding-right: 0;
+    padding-bottom: 4px;
+  }
+  .atariKeyboard .side-key {
+    width: 100%;
+    min-width: 0;
+    flex: initial;
+    height: var(--key-h);
+    border-bottom-width: clamp(1px, 0.4vw, 3px);
+    border-radius: clamp(2px, 0.5vw, 4px);
+  }
+  .atariKeyboard .side-key::before {
+    inset: clamp(1px, 0.3vw, 2px) clamp(1px, 0.4vw, 3px) clamp(2px, 0.6vw, 5px) clamp(1px, 0.4vw, 3px);
+    border-radius: 2px;
+  }
+  .atariKeyboard .side-key::after {
+    inset: clamp(1px, 0.3vw, 2px) clamp(1px, 0.4vw, 3px) clamp(2px, 0.6vw, 5px) clamp(1px, 0.4vw, 3px);
+    border-radius: 2px;
+  }
+  .atariKeyboard .side-key.pressed,
+  .atariKeyboard .side-key:active,
+  .atariKeyboard .side-key.active {
+    transform: translateY(clamp(1px, 0.4vw, 3px));
+  }
+  .atariKeyboard .case-strip {
+    grid-column: 1;
+    grid-row: 4;
+    padding: 0 var(--side-pad-x) clamp(4px, 1.4vw, 12px);
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+  .atariKeyboard .strip {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--gap);
+    padding-left: 0;
+    padding-top: 0;
+    align-items: center;
+    width: 100%;
+  }
+  .atariKeyboard .strip-label {
+    height: clamp(10px, 3.2vw, 16px);
+    margin-bottom: 0;
+    font-size: clamp(6px, 1.9vw, 10px);
+    letter-spacing: 0.03em;
+    line-height: 1.1;
+    min-width: 0;
+    width: 100%;
+    flex: initial;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 2px;
+    text-align: center;
+  }
+}
+
+
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 336 / 240;
+  flex: 0 0 auto;
+  image-rendering: pixelated;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #000;
+  outline: none;
+  will-change: transform;
+}
+
+canvas.crtEnabled.crtDisabled {
+  image-rendering: pixelated;
+}
+
+canvas.crtEnabled {
+  image-rendering: auto;
+  border-radius: 0;
+  border: 0;
+  background: transparent;
+}
+
+.hint {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  text-align: center;
+  width: 100%;
+}
+
+.fileBtn {
+  position: relative;
+  cursor: pointer;
+  display: inline-flex;
+}
+
+.fileBtn input[type="file"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.fileBtn span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: var(--fs-sm);
+  transition: border-color 0.15s;
+  white-space: nowrap;
+}
+
+.fileBtn:hover span {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.fileBtnPrimary span {
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: var(--fs-base);
+  font-weight: 600;
+}
+
+.fileBtnPrimary span > .fa-floppy-disk {
+  color: var(--accent);
+  font-size: 16px;
+}
+
+.diskOpenBtn span {
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  background: rgba(8, 12, 20, 0.45);
+  color: var(--muted);
+  font-weight: 500;
+  justify-content: center;
+}
+
+.diskOpenBtn span > .fa-floppy-disk {
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.diskOpenBtn:hover span {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.rom-status-led {
+  display: inline-block;
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  background-image: url("assets/leds.png");
+  background-repeat: no-repeat;
+  background-size: 72.33px 24px;
+  background-position: -53px center;
+  vertical-align: middle;
+}
+
+.rom-status-led.loaded {
+  background-position: -18px center;
+}
+
+
+@media (max-width: 980px) {
+  .controls {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .primaryControls {
+    flex: 1 1 auto;
+  }
+
+  .controlsSecondary {
+    justify-content: flex-start;
+  }
+
+  body {
+    overflow: auto;
+  }
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "screen"
+      "input"
+      "tools";
+    flex: none;
+    overflow-y: auto;
+  }
+  .layoutSplitter {
+    display: none !important;
+  }
+  .inputPanelRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .inputPanelRow > #keyboardPanel,
+  .inputPanelRow > #joystickPanel {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .inputPanelRow > #keyboardPanel {
+    order: 1;
+  }
+  .inputPanelRow > #joystickPanel {
+    order: 2;
+  }
+  .layoutTools {
+    width: 100%;
+  }
+  .keyboardPanel {
+    width: 100%;
+    padding: 8px 8px 18px;
+    align-self: stretch;
+  }
+  .joystickPanel {
+    width: 100%;
+    padding: 8px;
+    align-self: stretch;
+  }
+  .cx40 {
+    width: min(352px, calc(100vw - 64px));
+    height: min(352px, calc(100vw - 64px));
+  }
+  .joystickPanelInner {
+    overflow-x: auto;
+    overflow-y: hidden;
+    justify-content: flex-start;
+  }
+  .atariKeyboard {
+    width: 100%;
+    margin-inline: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .layoutSchemeControls {
+    margin-left: auto;
+  }
+
+  .fileBtnPrimary {
+    flex: 1 1 100%;
+  }
+
+  .fileBtnPrimary span {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ---- H: Device File Manager (Atari 800 XL themed) ---- */
+.hostfsPanel {
+  width: min(100%, 1083px);
+  min-height: clamp(220px, 36vh, 420px);
+  border: 1px solid var(--sub-panel-border);
+  border-radius: 6px;
+  background: var(--sub-panel-bg);
+  margin-top: 8px;
+  font-size: var(--fs-sm);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  align-self: center;
+}
+.hostfsPanel[hidden] {
+  display: none;
+}
+/* Title bar */
+.hostfs-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--sub-panel-header-bg);
+  border-bottom: 1px solid var(--sub-panel-border);
+  flex-shrink: 0;
+}
+.hostfs-title-icon {
+  color: var(--accent);
+  font-size: var(--fs-base);
+}
+.hostfs-title-text {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+.hostfs-flex {
+  flex: 1;
+}
+/* Toolbar */
+.hostfs-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  background: var(--sub-panel-toolbar-bg);
+  border-bottom: 1px solid var(--sub-panel-inner-border);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.hostfs-btn {
+  background: transparent;
+  border: 1px solid var(--sub-panel-inner-border);
+  color: var(--sub-panel-btn-idle);
+  border-radius: var(--sub-panel-btn-radius);
+  padding: 4px 7px;
+  min-width: 30px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+.hostfs-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(92, 200, 255, 0.06);
+}
+.hostfs-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.hostfs-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.hostfs-btn-danger:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: rgba(200, 64, 48, 0.08);
+}
+.hostfs-toolbar-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--sub-panel-inner-border);
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+.hostfs-label {
+  color: var(--sub-panel-label);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+/* Sortable column headers */
+.hostfs-sort-col {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.12s;
+  gap: 4px;
+}
+.hostfs-sort-col:hover {
+  color: var(--accent);
+}
+.hostfs-sort-col.active {
+  color: var(--accent);
+}
+/* Drop zone / file list area */
+.hostfs-drop-zone {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  transition: background 0.15s;
+}
+.hostfs-drop-zone.drag-over {
+  background: rgba(92, 200, 255, 0.04);
+  outline: 2px dashed var(--accent);
+  outline-offset: -3px;
+}
+/* Column headers */
+.hostfs-cols-header {
+  display: flex;
+  align-items: center;
+  padding: 3px 6px;
+  background: var(--sub-panel-statusbar-bg);
+  border-bottom: 1px solid var(--sub-panel-inner-border);
+  color: var(--sub-panel-dim);
+  font-size: var(--fs-xs);
+  flex-shrink: 0;
+}
+/* File list */
+.hostfs-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 96px;
+}
+.hostfs-list::-webkit-scrollbar {
+  width: 5px;
+}
+.hostfs-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.hostfs-list::-webkit-scrollbar-thumb {
+  background: var(--sub-panel-inner-border);
+  border-radius: 3px;
+}
+.hostfs-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+/* Drop hint */
+.hostfs-drop-hint {
+  text-align: center;
+  color: var(--sub-panel-dim);
+  font-size: var(--fs-xs);
+  padding: 4px 0 5px;
+  pointer-events: none;
+  transition: color 0.15s;
+}
+.hostfs-drop-zone.drag-over .hostfs-drop-hint {
+  color: var(--accent);
+}
+/* Empty state */
+.hostfs-empty {
+  text-align: center;
+  color: var(--sub-panel-dim);
+  padding: 28px 0 20px;
+  line-height: 2;
+}
+/* Column layout (shared for header + rows) */
+.hostfs-col {
+  display: flex;
+  align-items: center;
+}
+.hostfs-col-chk {
+  width: 24px;
+  flex-shrink: 0;
+  justify-content: center;
+}
+.hostfs-col-icon {
+  width: 28px;
+  flex-shrink: 0;
+  justify-content: center;
+}
+.hostfs-col-name {
+  flex: 1;
+  min-width: 0;
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hostfs-col-size {
+  width: 58px;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  color: var(--sub-panel-dim);
+  font-size: var(--fs-xs);
+}
+.hostfs-col-actions {
+  width: 74px;
+  flex-shrink: 0;
+  justify-content: flex-end;
+  gap: 2px;
+}
+/* File rows */
+.hostfs-row {
+  display: flex;
+  align-items: center;
+  padding: 3px 6px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background 0.1s;
+}
+.hostfs-row:hover {
+  background: rgba(92, 200, 255, 0.04);
+}
+.hostfs-row:nth-child(even) {
+  background: rgba(255, 255, 255, 0.013);
+}
+.hostfs-row.selected {
+  background: rgba(92, 200, 255, 0.08);
+  border-left-color: var(--accent);
+}
+.hostfs-row.selected:hover,
+.hostfs-row.selected:nth-child(even) {
+  background: rgba(92, 200, 255, 0.13);
+}
+/* File name parts */
+.hostfs-fname-base {
+  color: var(--text);
+}
+.hostfs-fname-ext {
+  color: var(--sub-panel-dim);
+}
+.hostfs-lock-icon {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  margin-left: 5px;
+}
+/* Checkboxes */
+.hostfs-master-chk,
+.hostfs-row-chk {
+  accent-color: var(--accent);
+  cursor: pointer;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+/* Row action buttons */
+.hostfs-action-btn {
+  background: none;
+  border: none;
+  color: var(--sub-panel-dim);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--sub-panel-btn-radius);
+  transition: color 0.1s, background 0.1s;
+  line-height: 1;
+}
+.hostfs-action-btn:hover:not(:disabled) {
+  color: var(--accent);
+  background: rgba(92, 200, 255, 0.1);
+}
+.hostfs-action-del:hover:not(:disabled) {
+  color: var(--danger);
+  background: rgba(200, 64, 48, 0.1);
+}
+.hostfs-action-run:hover:not(:disabled) {
+  color: var(--success, #70e070);
+  background: rgba(112, 224, 112, 0.1);
+}
+.hostfs-action-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+/* Status bar */
+.hostfs-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: var(--sub-panel-statusbar-bg);
+  border-top: 1px solid var(--sub-panel-inner-border);
+  color: var(--sub-panel-dim);
+  font-size: var(--fs-xs);
+  flex-shrink: 0;
+}
+.hostfs-run-status {
+  color: var(--accent);
+  font-size: var(--fs-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hostfs-stat-sel {
+  color: var(--accent);
+  font-weight: 600;
+}
+.hostfs-stat-total {
+  color: var(--sub-panel-dim);
+}
+
+/* ---- Persistent Multi-Drive Disk Library ---- */
+.disklibPanel {
+  width: min(100%, 1083px);
+  min-height: clamp(220px, 36vh, 420px);
+  border: 1px solid var(--sub-panel-border);
+  border-radius: 6px;
+  background: var(--sub-panel-bg);
+  margin-top: 8px;
+  font-size: var(--fs-sm);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  align-self: center;
+}
+.disklibPanel[hidden] {
+  display: none;
+}
+.disklib-titlebar,
+.disklib-toolbar,
+.disklib-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.disklib-titlebar {
+  padding: 6px 10px;
+  background: var(--sub-panel-header-bg);
+  border-bottom: 1px solid var(--sub-panel-border);
+}
+.disklib-title-icon {
+  color: var(--accent);
+  font-size: var(--fs-base);
+}
+.disklib-title-text {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+.disklib-current-path {
+  margin-left: 8px;
+  color: var(--text);
+  font-family: monospace;
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.disklib-status {
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  color: var(--sub-panel-dim);
+}
+.disklib-status.success {
+  color: #70d090;
+}
+.disklib-status.error {
+  color: var(--danger);
+}
+.disklib-status.busy {
+  color: var(--accent);
+}
+.disklib-toolbar {
+  padding: 5px 8px;
+  background: var(--sub-panel-toolbar-bg);
+  border-bottom: 1px solid var(--sub-panel-inner-border);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.disklib-atr-view {
+  display: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+.disklibPanel.disklib-atr-view-mode .disklib-mounted-panel,
+.disklibPanel.disklib-atr-view-mode > .disklib-toolbar,
+.disklibPanel.disklib-atr-view-mode > .disklib-drop-zone,
+.disklibPanel.disklib-atr-view-mode > .disklib-searchbar,
+.disklibPanel.disklib-atr-view-mode > .disklib-statusbar {
+  display: none;
+}
+.disklibPanel.disklib-atr-view-mode .disklib-atr-view {
+  display: flex;
+}
+.disklib-atr-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: var(--sub-panel-toolbar-bg);
+  border-bottom: 1px solid var(--sub-panel-inner-border);
+}
+.disklib-atr-title {
+  color: var(--text);
+  font-family: monospace;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.disklib-atr-info {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  color: var(--sub-panel-dim);
+  font-size: var(--fs-xs);
+  border-bottom: 1px solid var(--sub-panel-inner-border);
+}
+.disklib-atr-content {
+  flex: 1 1 auto;
+  min-height: 96px;
+  overflow: auto;
+}
+.disklib-atr-cols-header,
+.disklib-atr-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 72px 72px 80px 58px;
+  align-items: center;
+  column-gap: 8px;
+  padding: 4px 10px;
+  min-width: 500px;
+}
+.disklib-atr-cols-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--sub-panel-statusbar-bg);
+  border-bottom: 1px solid var(--sub-panel-inner-border);
+  color: var(--sub-panel-dim);
+  font-size: var(--fs-xs);
+}
+.disklib-atr-row {
+  color: var(--text);
+  font-family: monospace;
+  font-size: var(--fs-xs);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.disklib-atr-row:hover {
+  background: rgba(92, 200, 255, 0.05);
+}
+.disklib-atr-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.disklib-atr-actions {
+  white-space: nowrap;
+}
+.disklib-atr-raw {
+  padding: 10px;
+  color: var(--sub-panel-dim);
+  font: 11px/1.45 monospace;
+  white-space: pre;
+}
+.disklib-atr-preview {
+  flex: 0 1 220px;
+  min-height: 0;
+  max-height: 220px;
+  border-top: 1px solid var(--sub-panel-inner-border);
+  background: var(--sub-panel-toolbar-bg);
+  overflow: auto;
+}
+.disklib-atr-preview[hidden] {
+  display: none !important;
+}
+.disklib-atr-preview-title {
+  padding: 4px 10px;
+  color: var(--sub-panel-label);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.disklib-atr-preview-text {
+  margin: 0;
+  padding: 4px 10px 10px;
+  color: var(--text);
+  font: 11px/1.4 monospace;
+  white-space: pre;
+}
+.disklib-btn {
+  background: transparent;
+  border: 1px solid var(--sub-panel-inner-border);
+  color: var(--sub-panel-btn-idle);
+  border-radius: var(--sub-panel-btn-radius);
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+.disklib-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(92, 200, 255, 0.06);
+}
+.disklib-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.disklib-btn-danger:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: rgba(200, 64, 48, 0.08);
+}
+.disklib-label {
+  color: var(--sub-panel-label);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.disklib-toolbar-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--sub-panel-inner-border);
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+.disklib-mounted-panel {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  background: var(--sub-panel-bg);
+  border-bottom: 1px solid var(--sub-panel-inner-border);
+}
+.disklib-mounted-title {
+  color: var(--sub-panel-label);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.disklib-mounted-title i {
+  color: var(--accent);
+  margin-right: 4px;
+}
+.disklib-mounted-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.disklib-mounted-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 18px max-content;
+  align-items: center;
+  column-gap: 7px;
+  min-width: 0;
+  white-space: nowrap;
+  font-size: var(--fs-xs);
+}
+.disklib-mounted-unit {
+  color: var(--accent);
+  font-family: monospace;
+  font-weight: 700;
+}
+.disklib-mounted-path {
+  min-width: 0;
+  color: var(--text);
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.disklib-mounted-activity {
+  display: inline-block;
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  background-image: url("assets/leds.png");
+  background-repeat: no-repeat;
+  background-size: 72.33px 24px;
+  background-position: -53px center;
+  vertical-align: middle;
+}
+.disklib-mounted-activity.active {
+  animation: disk-activity-blink 180ms steps(1, end) 4;
+}
+.disklib-mounted-activity.disklib-activity-read.active {
+  background-position: -18px center;
+}
+.disklib-mounted-activity.disklib-activity-write.active {
+  background-position: -0.67px center;
+}
+.disklib-mounted-activity.disklib-activity-error.active {
+  background-position: -35.33px center;
+}
+.disklib-mounted-empty {
+  color: var(--sub-panel-dim);
+  font-size: var(--fs-xs);
+  font-style: italic;
+}
+.disklib-drop-zone {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  transition: background 0.15s;
+}
+.disklib-drop-zone.drag-over {
+  background: rgba(92, 200, 255, 0.04);
+  outline: 2px dashed var(--accent);
+  outline-offset: -3px;
+}
+.disklib-table-scroll {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.disklib-cols-header,
+.disklib-row {
+  display: grid;
+  grid-template-columns: 28px minmax(150px, 1fr) repeat(4, 42px) 112px;
+  align-items: center;
+  column-gap: 4px;
+  padding: 3px 6px;
+}
+.disklib-cols-header {
+  background: var(--sub-panel-statusbar-bg);
+  border-bottom: 1px solid var(--sub-panel-inner-border);
+  color: var(--sub-panel-dim);
+  font-size: var(--fs-xs);
+  min-width: 512px;
+  flex-shrink: 0;
+}
+.disklib-list {
+  flex: 1 1 auto;
+  min-width: 512px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 96px;
+}
+.disklib-row {
+  /*min-width: 580px;*/
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background 0.1s;
+}
+.disklib-row:hover {
+  background: rgba(92, 200, 255, 0.04);
+}
+.disklib-row:nth-child(even) {
+  background: rgba(255, 255, 255, 0.013);
+}
+.disklib-row.selected {
+  background: rgba(92, 200, 255, 0.08);
+  border-left-color: var(--accent);
+}
+.disklib-col {
+  min-width: 0;
+}
+.disklib-col-chk,
+.disklib-col-drive {
+  text-align: center;
+}
+.disklib-col-name {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  align-items: center;
+  column-gap: 6px;
+  overflow: hidden;
+  font-family: monospace;
+  white-space: nowrap;
+}
+.disklib-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.disklib-search-mode .disklib-col-name {
+  grid-template-columns: max-content minmax(0, 2fr) minmax(0, 1fr) max-content;
+}
+.disklib-source-path {
+  min-width: 0;
+  color: var(--sub-panel-dim);
+  font-family: sans-serif;
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.disklib-col-size {
+  text-align: right;
+  color: var(--sub-panel-dim);
+  font-size: var(--fs-xs);
+}
+.disklib-folder-icon {
+  color: #e0b84f;
+  font-size: 13px;
+}
+.disklib-folder-row .disklib-name {
+  color: var(--text);
+}
+.disklib-col-actions {
+  width: 11em;
+}
+.disklib-type {
+  min-width: 28px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  color: #5cc8ff;
+  background: rgba(92, 200, 255, 0.1);
+  font-family: sans-serif;
+  font-size: 9px;
+  text-align: center;
+}
+.disklib-type-xex {
+  color: #ffaa40;
+  background: rgba(255, 170, 64, 0.1);
+}
+.disklib-dirty {
+  color: #ffaa40;
+  font-family: sans-serif;
+  font-weight: bold;
+}
+.disklib-master-chk,
+.disklib-row-chk,
+.disklib-drive-chk {
+  accent-color: var(--accent);
+  cursor: pointer;
+  width: 12px;
+  height: 12px;
+}
+.disklib-drive-chk:checked {
+  accent-color: #70d090;
+}
+.disklib-action-btn {
+  display: inline-block;
+  background: none;
+  border: none;
+  color: var(--sub-panel-dim);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--sub-panel-btn-radius);
+  transition: color 0.1s, background 0.1s;
+  line-height: 1;
+}
+.disklib-action-btn:hover {
+  color: var(--accent);
+  background: rgba(92, 200, 255, 0.1);
+}
+.disklib-empty {
+  text-align: center;
+  color: var(--sub-panel-dim);
+  padding: 28px 0 20px;
+  line-height: 2;
+}
+.disklib-drop-hint {
+  text-align: center;
+  color: var(--sub-panel-dim);
+  font-size: var(--fs-xs);
+  padding: 4px 0 5px;
+  pointer-events: none;
+  transition: color 0.15s;
+}
+.disklib-drop-zone.drag-over .disklib-drop-hint {
+  color: var(--accent);
+}
+.disklib-searchbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--sub-panel-bg);
+  border-top: 1px solid var(--sub-panel-inner-border);
+}
+.disklib-searchbar > i {
+  color: var(--sub-panel-dim);
+  font-size: var(--fs-xs);
+}
+.disklib-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--sub-panel-toolbar-bg);
+  border: 1px solid var(--sub-panel-inner-border);
+  border-radius: var(--sub-panel-btn-radius);
+  color: var(--text);
+  font: inherit;
+  padding: 3px 6px;
+  outline: none;
+}
+.disklib-search-input:focus {
+  border-color: var(--accent);
+}
+.disklib-filter-type,
+.disklib-filter-status,
+.disklib-sort {
+  flex: 0 0 auto;
+  min-width: 88px;
+  background: var(--sub-panel-toolbar-bg);
+  border: 1px solid var(--sub-panel-inner-border);
+  border-radius: var(--sub-panel-btn-radius);
+  color: var(--text);
+  font: inherit;
+  padding: 3px 5px;
+  outline: none;
+}
+.disklib-filter-type:focus,
+.disklib-filter-status:focus,
+.disklib-sort:focus {
+  border-color: var(--accent);
+}
+.disklib-statusbar {
+  padding: 4px 10px;
+  background: var(--sub-panel-statusbar-bg);
+  border-top: 1px solid var(--sub-panel-inner-border);
+  color: var(--sub-panel-dim);
+  font-size: var(--fs-xs);
+}
+.disklib-stat-sel {
+  color: var(--accent);
+  font-weight: 600;
+}
+.disklib-stat-info {
+  min-width: 0;
+  max-width: 52%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.disklib-flex {
+  flex: 1;
+}
+
+@media (max-width: 600px) {
+  .disklibPanel {
+    width: 100%;
+  }
+}
+
+/* ---- Assembler Editor Panel ---- */
+.assemblerPanel {
+  width: min(100%, 1083px);
+  /* dvh tracks the *visible* viewport as mobile browser chrome shows/hides;
+     the vh values are the fallback for browsers without dvh support. */
+  height: calc(100vh - 70px);
+  height: calc(100dvh - 70px);
+  min-height: 340px;
+  max-height: calc(100vh - 70px);
+  max-height: calc(100dvh - 70px);
+  flex-shrink: 0;
+  border: 1px solid var(--sub-panel-border);
+  border-radius: 6px;
+  background: var(--sub-panel-bg);
+  margin-top: 8px;
+  font-size: var(--fs-sm);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  align-self: center;
+}
+
+.assemblerPanel[hidden] {
+  display: none;
+}
+
+.asm-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--sub-panel-header-bg);
+  border-bottom: 1px solid var(--sub-panel-border);
+  flex-shrink: 0;
+}
+
+.asm-title-icon {
+  color: var(--accent);
+  font-size: var(--fs-base);
+}
+
+.asm-title-text {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.asm-title-path {
+  color: var(--sub-panel-dim);
+  font-family: monospace;
+  font-size: var(--fs-xs);
+}
+
+.asm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  background: var(--sub-panel-toolbar-bg);
+  border-bottom: 1px solid var(--sub-panel-inner-border);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.asm-label {
+  color: var(--sub-panel-label);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.asm-input,
+.asm-select {
+  background: var(--editor-input-bg);
+  border: 1px solid var(--sub-panel-inner-border);
+  border-radius: var(--sub-panel-btn-radius);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  padding: 4px 7px;
+  min-height: 28px;
+}
+
+.asm-input:focus,
+.asm-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb), 0.2);
+}
+
+.asm-source-name {
+  width: 150px;
+}
+
+.asm-source-select {
+  min-width: 180px;
+  max-width: 280px;
+}
+
+.asm-btn {
+  background: transparent;
+  border: 1px solid var(--sub-panel-inner-border);
+  color: var(--sub-panel-btn-idle);
+  border-radius: var(--sub-panel-btn-radius);
+  padding: 4px 7px;
+  min-width: 30px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+
+.asm-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.06);
+}
+
+/* Run/Continue use the standard .asm-btn style — the play icon is sufficient visual cue */
+/* Step/StepOver use the standard .asm-btn style */
+
+.asm-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.asm-toolbar-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--sub-panel-inner-border);
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+
+.asm-editor-wrap {
+  --asm-gutter-width: clamp(160px, 28vw, 260px);
+  flex: 1 1 auto;
+  min-height: 0;
+  display: block;
+  position: relative;
+  overflow: hidden;
+  background: var(--editor-bg);
+}
+
+.asm-breakpoints {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--asm-gutter-width);
+  margin: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--editor-gutter-bg);
+  overflow: hidden;
+  padding: 10px 0;
+}
+
+.asm-highlight {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--asm-gutter-width);
+  margin: 0;
+  border: 0;
+  overflow: auto;
+  pointer-events: none;
+  white-space: pre;
+  color: #86a3bf;
+  font: 13px/1.5 "Consolas", "Courier New", monospace;
+  tab-size: 2;
+  padding: 10px 12px;
+}
+
+/* Hide scrollbars on the highlight layer (scroll is synced by JS) */
+.asm-highlight::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.asm-highlight {
+  scrollbar-width: none; /* Firefox */
+}
+
+.asm-editor {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--asm-gutter-width);
+  resize: none;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: transparent;
+  caret-color: #d2e7ff;
+  font: 13px/1.5 "Consolas", "Courier New", monospace;
+  tab-size: 2;
+  padding: 10px 12px;
+  overflow: auto;
+}
+
+.asm-editor::selection {
+  background: rgba(110, 190, 255, 0.28);
+}
+
+.asm-bp-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--sub-panel-dim);
+  font: var(--fs-xs)/1 "Consolas", "Courier New", monospace;
+  justify-content: flex-start;
+  cursor: pointer;
+}
+
+/* column cell padding */
+.asm-bp-num,
+.asm-bp-addr,
+.asm-bp-bytes {
+  padding: 0 5px;
+}
+
+/* column dividers (left-border on every non-dot column) */
+.asm-bp-num,
+.asm-bp-addr,
+.asm-bp-bytes {
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.asm-bp-row:hover {
+  background: rgba(var(--accent-rgb), 0.1);
+}
+
+.asm-bp-row.no-addr {
+  opacity: 1;
+  cursor: default;
+}
+
+.asm-bp-row.no-addr:hover {
+  background: transparent;
+}
+
+.asm-bp-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background: transparent;
+  flex: 0 0 auto;
+  margin: 0 5px;
+  transition: border-color 0.1s, background 0.1s;
+}
+
+/* Enabled: line has an address — the dot becomes a visible "empty slot" */
+.asm-bp-row.has-addr .asm-bp-dot {
+  border-color: var(--sub-panel-dim);
+}
+
+/* Hover on an enabled row: accent tint signals "click to set breakpoint" */
+.asm-bp-row.has-addr:hover .asm-bp-dot {
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.15);
+}
+
+/* Active: breakpoint is set — filled red circle */
+.asm-bp-row.active .asm-bp-dot {
+  border-color: var(--state-err);
+  background: var(--state-err);
+  box-shadow: 0 0 5px rgba(248, 113, 113, 0.5);
+}
+
+.asm-bp-num {
+  min-width: 18px;
+  text-align: right;
+  flex: 0 0 auto;
+  color: var(--text);
+  font-size: var(--fs-xs);
+  opacity: 1;
+}
+
+.asm-bp-addr {
+  min-width: 36px;
+  text-align: right;
+  flex: 0 0 auto;
+  color: var(--sub-panel-dim);
+  font-size: var(--fs-xs);
+  opacity: 0.7;
+  letter-spacing: 0.02em;
+}
+
+.asm-bp-bytes {
+  min-width: 0;
+  flex: 1 1 auto;
+  text-align: left;
+  color: var(--sub-panel-dim);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.asm-bp-row.has-addr .asm-bp-num {
+  color: var(--text);
+}
+
+.asm-bp-row.no-addr .asm-bp-num {
+  color: var(--text);
+}
+
+.asm-bp-row.has-addr .asm-bp-addr {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.asm-bp-row.has-bytes .asm-bp-bytes {
+  color: var(--muted);
+}
+
+.asm-breakpoints.has-build .asm-bp-row.has-addr .asm-bp-num {
+  color: var(--accent);
+}
+
+.asm-breakpoints.has-build .asm-bp-row.has-addr .asm-bp-addr {
+  color: var(--text);
+}
+
+.asm-bp-row.active .asm-bp-num {
+  color: var(--state-err);
+}
+
+.asm-bp-row.active .asm-bp-addr {
+  color: var(--state-err);
+}
+
+.asm-bp-row.active .asm-bp-bytes {
+  color: var(--state-err);
+}
+
+.asm-bp-row.current {
+  background: rgba(var(--accent-rgb), 0.12);
+}
+
+.asm-bp-row.current .asm-bp-num {
+  color: var(--accent);
+}
+
+.asm-bp-row.current .asm-bp-addr {
+  color: var(--accent);
+}
+
+.asm-bp-row.current .asm-bp-bytes {
+  color: var(--accent);
+}
+
+.asm-breakpoints.unsupported .asm-bp-row {
+  cursor: not-allowed;
+}
+
+/* Consistent scrollbar styling for assembler editor + error list */
+.asm-editor::-webkit-scrollbar,
+.asm-errors::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.asm-editor::-webkit-scrollbar-track,
+.asm-errors::-webkit-scrollbar-track {
+  background: transparent;
+}
+.asm-editor::-webkit-scrollbar-thumb,
+.asm-errors::-webkit-scrollbar-thumb {
+  background: var(--sub-panel-inner-border);
+  border-radius: 3px;
+}
+.asm-editor::-webkit-scrollbar-thumb:hover,
+.asm-errors::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.asm-tok-comment {
+  color: #5f7f99;
+}
+
+.asm-tok-label {
+  color: #f0c26f;
+}
+
+.asm-tok-directive {
+  color: #74c8ff;
+}
+
+.asm-tok-mnemonic {
+  color: #89df8e;
+}
+
+.asm-tok-number {
+  color: #ffb37d;
+}
+
+.asm-tok-string {
+  color: #ffd37d;
+}
+
+.asm-tok-register {
+  color: #7ddfc6;
+}
+
+.asm-errors {
+  border-top: 1px solid var(--sub-panel-inner-border);
+  background: var(--editor-bg);
+  max-height: 128px;
+  overflow: auto;
+}
+
+.asm-error-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 8px 6px;
+}
+
+.asm-error-item + .asm-error-item {
+  margin-top: 3px;
+}
+
+.asm-error-btn {
+  width: 100%;
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  background: rgba(248, 113, 113, 0.06);
+  color: var(--state-err);
+  text-align: left;
+  padding: 4px 6px;
+  border-radius: var(--sub-panel-btn-radius);
+  font: var(--fs-sm)/1.4 "Consolas", "Courier New", monospace;
+  cursor: pointer;
+}
+
+.asm-error-btn:hover {
+  border-color: rgba(248, 113, 113, 0.5);
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.asm-statusbar {
+  display: flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: var(--sub-panel-statusbar-bg);
+  border-top: 1px solid var(--sub-panel-inner-border);
+  color: var(--sub-panel-dim);
+  font-size: var(--fs-xs);
+  flex-shrink: 0;
+}
+
+.asm-resize-handle {
+  height: 7px;
+  cursor: ns-resize;
+  background: var(--sub-panel-statusbar-bg);
+  border-top: 1px solid var(--sub-panel-inner-border);
+  flex-shrink: 0;
+  position: relative;
+  user-select: none;
+}
+.asm-resize-handle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 36px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--sub-panel-inner-border);
+  transition: background 0.15s;
+}
+.asm-resize-handle:hover::after,
+.asm-resize-handle:active::after {
+  background: var(--sub-panel-btn-idle);
+}
+
+.asm-status.error {
+  color: var(--state-err);
+}
+
+.asm-status.success {
+  color: var(--state-ok);
+}
+
+@media (max-width: 980px) {
+  .assemblerPanel {
+    width: 100%;
+    align-self: stretch;
+  }
+
+  .asm-source-name {
+    width: min(44vw, 220px);
+  }
+
+  .asm-source-select {
+    min-width: min(52vw, 240px);
+    max-width: min(70vw, 300px);
+  }
+}
+
+/* On phones the 160px clamp floor of the breakpoint gutter eats ~half the
+   editor width (28vw only overtakes 160px above ~570px wide). Shrink the floor
+   so the code column stays usable; the gutter still fits line #, address and a
+   trimmed byte column. */
+@media (max-width: 600px) {
+  .asm-editor-wrap {
+    --asm-gutter-width: clamp(100px, 30vw, 160px);
+  }
+}
+
+/* ---- Snapshot Panel ---- */
+.snapshotPanel {
+  width: min(100%, 1083px);
+  min-height: clamp(260px, 34vh, 360px);
+  max-height: 90vh;
+  max-height: 90dvh;
+  border: 1px solid var(--sub-panel-border);
+  border-radius: 6px;
+  background: var(--sub-panel-bg);
+  margin-top: 8px;
+  font-size: var(--fs-sm);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  align-self: center;
+}
+
+.snapshotPanel[hidden] {
+  display: none;
+}
+
+.snapshot-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--sub-panel-header-bg);
+  border-bottom: 1px solid var(--sub-panel-border);
+  flex-shrink: 0;
+}
+
+.snapshot-title-icon {
+  color: var(--accent);
+  font-size: var(--fs-base);
+}
+
+.snapshot-title-text {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.snapshot-title-meta {
+  color: var(--sub-panel-dim);
+  font-family: monospace;
+  font-size: var(--fs-xs);
+}
+
+.snapshot-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  background: var(--sub-panel-toolbar-bg);
+  border-bottom: 1px solid var(--sub-panel-inner-border);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.snapshot-label {
+  color: var(--sub-panel-label);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.snapshot-btn {
+  background: transparent;
+  border: 1px solid var(--sub-panel-inner-border);
+  color: var(--sub-panel-btn-idle);
+  border-radius: var(--sub-panel-btn-radius);
+  padding: 4px 7px;
+  min-width: 30px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+
+.snapshot-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.06);
+}
+
+.snapshot-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.snapshot-toolbar-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--sub-panel-inner-border);
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+
+.snapshot-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px;
+  background: var(--snapshot-bg);
+  flex: 1 1 auto;
+  min-height: 0;
+  align-content: start;
+}
+
+.snapshot-card {
+  border: 1px solid var(--sub-panel-inner-border);
+  border-radius: 6px;
+  background: var(--snapshot-card-bg);
+  padding: 10px 12px;
+  min-height: 72px;
+}
+
+.snapshot-card-label {
+  color: var(--sub-panel-label);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.snapshot-card-value {
+  margin-top: 6px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.snapshot-card-meta {
+  margin-top: 4px;
+  color: var(--sub-panel-dim);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+}
+
+.snapshot-slot-state.is-empty {
+  color: var(--muted);
+}
+
+.snapshot-slot-state.is-ready {
+  color: var(--state-ok);
+}
+
+.snapshot-statusbar {
+  display: flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: var(--sub-panel-statusbar-bg);
+  border-top: 1px solid var(--sub-panel-inner-border);
+  color: var(--sub-panel-dim);
+  font-size: var(--fs-xs);
+  flex-shrink: 0;
+}
+
+.snapshot-status.error {
+  color: var(--state-err);
+}
+
+.snapshot-status.success {
+  color: var(--state-ok);
+}
+
+@media (max-width: 980px) {
+  .snapshotPanel {
+    width: 100%;
+    align-self: stretch;
+  }
+
+  .snapshot-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- Mobile presentation ----
+   Mobile uses the same emulator and panel components, but presents tool
+   panels as one focused overlay instead of stacking every desktop panel in
+   the document flow. */
+.mobileActionBar,
+.mobilePanelBackdrop,
+.mobilePanelClose,
+.mobileToolsSheet {
+  display: none;
+}
+
+.systemKeyboardInput {
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 2px;
+  min-width: 2px;
+  min-height: 2px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  opacity: 0.01;
+  color: transparent;
+  background: transparent;
+  caret-color: transparent;
+  font-size: 16px;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.systemKeyboardTouchZone {
+  display: none;
+}
+
+.mobileActionBar[hidden],
+.mobilePanelBackdrop[hidden],
+.mobilePanelClose[hidden],
+.mobileToolsSheet[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 980px) {
+  :root {
+    --mobile-action-height: 62px;
+  }
+
+  .systemKeyboardInput {
+    visibility: visible;
+  }
+
+  body.system-keyboard-mode {
+    overflow: hidden;
+  }
+
+  body.system-keyboard-mode .layout {
+    overflow: hidden;
+  }
+
+  body.system-keyboard-mode .systemKeyboardTouchZone {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: block;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    outline: 0;
+    opacity: 0;
+    background: transparent;
+    pointer-events: auto;
+    touch-action: none;
+  }
+
+  .topbar {
+    align-items: center;
+    padding: 8px 10px;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .brand {
+    flex: 0 0 auto;
+    min-height: 38px;
+  }
+
+  .controls {
+    width: auto;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  .controlsPrimary {
+    justify-content: flex-start;
+    gap: 4px;
+  }
+
+  .primaryControls {
+    flex-wrap: nowrap;
+    gap: 4px;
+    overflow: hidden;
+  }
+
+  #toolbarRomOs,
+  #toolbarRomBasic,
+  #toolbarUtilityControls,
+  .layoutSchemeControls,
+  #btnControlsCollapse {
+    display: none;
+  }
+
+  #toolbarLifecycleControls {
+    flex-shrink: 0;
+    gap: 4px;
+  }
+
+  #toolbarLifecycleControls button,
+  #toolbarDiskOpen {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  #toolbarDiskOpen {
+    flex: 0 0 40px;
+  }
+
+  .layout {
+    padding: 8px 8px calc(var(--mobile-action-height) + 14px + env(safe-area-inset-bottom));
+    gap: 8px;
+  }
+
+  .layout[data-layout-scheme="work"],
+  .layout[data-layout-scheme="development"] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "screen"
+      "input"
+      "tools";
+    align-items: start;
+  }
+
+  .layoutSplitter {
+    display: none !important;
+  }
+
+  .screenPanel {
+    gap: 6px;
+  }
+
+  .screenViewport {
+    width: 100%;
+  }
+
+  .inputPanelRow {
+    gap: 8px;
+  }
+
+  .layoutTools {
+    position: fixed;
+    z-index: 230;
+    top: 8px;
+    right: 8px;
+    bottom: calc(var(--mobile-action-height) + 8px + env(safe-area-inset-bottom));
+    left: 8px;
+    display: none;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: stretch;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--sub-panel-border);
+    border-radius: 12px;
+    background: var(--sub-panel-bg);
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.6);
+  }
+
+  body.mobile-panel-open .layoutTools {
+    display: grid;
+  }
+
+  .layoutTools > [hidden] {
+    display: none !important;
+  }
+
+  .layoutTools > .disklibPanel:not([hidden]),
+  .layoutTools > .hostfsPanel:not([hidden]),
+  .layoutTools > .assemblerPanel:not([hidden]),
+  .layoutTools > .snapshotPanel:not([hidden]) {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    max-height: none;
+    margin: 0;
+    align-self: stretch;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .mobilePanelBackdrop {
+    position: fixed;
+    z-index: 220;
+    inset: 0;
+    display: block;
+    background: rgba(3, 7, 13, 0.72);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+  }
+
+  .mobilePanelClose {
+    position: fixed;
+    z-index: 260;
+    top: 14px;
+    right: 14px;
+    display: inline-flex;
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    min-height: 42px;
+    border-color: rgba(255, 255, 255, 0.16);
+    border-radius: 50%;
+    background: rgba(13, 17, 23, 0.92);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  }
+
+  .mobileActionBar {
+    position: fixed;
+    z-index: 250;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
+    min-height: var(--mobile-action-height);
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: rgba(13, 17, 23, 0.96);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+
+  .mobileActionBar button {
+    min-width: 0;
+    min-height: 48px;
+    padding: 4px 2px;
+    border-color: transparent;
+    background: transparent;
+    color: var(--muted);
+    flex-direction: column;
+    gap: 3px;
+    font-size: 10px;
+  }
+
+  .mobileActionBar button i {
+    font-size: 17px;
+  }
+
+  .mobileActionBar button:focus-visible,
+  .mobileActionBar button.active {
+    border-color: rgba(92, 200, 255, 0.45);
+    background: rgba(92, 200, 255, 0.13);
+    color: var(--text);
+  }
+
+  @media (hover: hover) {
+    .mobileActionBar button:hover:not(:disabled) {
+      border-color: rgba(92, 200, 255, 0.45);
+      background: rgba(92, 200, 255, 0.13);
+      color: var(--text);
+    }
+  }
+
+  .mobileToolsSheet {
+    position: fixed;
+    z-index: 240;
+    right: 8px;
+    bottom: calc(var(--mobile-action-height) + 8px + env(safe-area-inset-bottom));
+    left: 8px;
+    display: block;
+    max-height: min(72vh, 560px);
+    overflow: auto;
+    border: 1px solid var(--sub-panel-border);
+    border-radius: 12px;
+    background: var(--sub-panel-bg);
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.6);
+  }
+
+  .mobileSheetTitlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 46px;
+    padding: 0 10px 0 14px;
+    border-bottom: 1px solid var(--sub-panel-border);
+    background: var(--sub-panel-header-bg);
+    color: var(--text);
+    font-size: var(--fs-base);
+    font-weight: 700;
+  }
+
+  .mobileSheetTitlebar button {
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
+    padding: 0;
+  }
+
+  .mobileToolsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .mobileToolsGrid button {
+    min-height: 64px;
+    padding: 8px 4px;
+    flex-direction: column;
+    gap: 6px;
+    color: var(--muted);
+    font-size: var(--fs-xs);
+    text-align: center;
+  }
+
+  .mobileToolsGrid button i {
+    color: var(--accent);
+    font-size: 18px;
+  }
+
+  .mobileToolsGrid button:focus-visible {
+    border-color: rgba(92, 200, 255, 0.55);
+    background: rgba(92, 200, 255, 0.1);
+    color: var(--text);
+  }
+
+  @media (hover: hover) {
+    .mobileToolsGrid button:hover:not(:disabled) {
+      border-color: rgba(92, 200, 255, 0.55);
+      background: rgba(92, 200, 255, 0.1);
+      color: var(--text);
+    }
+  }
+
+  .mobileToolsGrid button.active {
+    border-color: rgba(92, 200, 255, 0.65);
+    background: rgba(92, 200, 255, 0.18);
+    color: var(--text);
+    box-shadow: inset 0 0 0 1px rgba(92, 200, 255, 0.1);
+  }
+
+  .controlsSecondary:not([hidden]) {
+    position: fixed;
+    z-index: 260;
+    top: 8px;
+    right: 8px;
+    left: 8px;
+    display: flex;
+    min-height: 58px;
+    padding: 8px;
+    border: 1px solid var(--sub-panel-border);
+    border-radius: 12px;
+    background: var(--sub-panel-bg);
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.6);
+  }
+
+  .controlsSecondary:not([hidden]) .iconControlsSecondary {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .controlsSecondary:not([hidden]) .toolbarSelectWrap {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 6px;
+  }
+
+  .controlsSecondary:not([hidden]) .toolbarSelect {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .brand {
+    width: auto;
+    flex: 0 0 auto;
+    min-height: 32px;
+  }
+
+  .controlsPrimary {
+    width: 100%;
+  }
+
+  .primaryControls {
+    min-width: 0;
+  }
+
+  .mobileToolsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Remote workspace sync: LED (reuses the activity sprite), title-bar control
+ * and connection dialog. Sprite offsets: grey -53, green -18, yellow -0.67,
+ * red -35.33. */
+.remote-led {
+  display: inline-block;
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  background-image: url("assets/leds.png");
+  background-repeat: no-repeat;
+  background-size: 72.33px 24px;
+  background-position: -53px center;
+  vertical-align: middle;
+}
+.remote-led[data-state="synced"],
+.remote-led[data-state="syncing"] {
+  background-position: -18px center;
+}
+.remote-led[data-state="pending"] {
+  background-position: -0.67px center;
+}
+.remote-led[data-state="error"] {
+  background-position: -35.33px center;
+}
+.remote-led[data-state="syncing"],
+.remote-led[data-state="error"] {
+  animation: remote-led-pulse 900ms ease-in-out infinite;
+}
+@keyframes remote-led-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .remote-led[data-state="syncing"],
+  .remote-led[data-state="error"] {
+    animation: none;
+  }
+}
+.disklib-remote-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.remote-led-host {
+  position: relative;
+}
+.remote-led-badge {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 10px;
+  min-width: 10px;
+  height: 10px;
+  background-size: 40.2px 13.33px;
+  background-position: -29.4px center;
+  pointer-events: none;
+}
+.remote-led-badge[data-state="synced"],
+.remote-led-badge[data-state="syncing"] {
+  background-position: -10px center;
+}
+.remote-led-badge[data-state="pending"] {
+  background-position: -0.37px center;
+}
+.remote-led-badge[data-state="error"] {
+  background-position: -19.6px center;
+}
+.remote-led-badge[data-state="off"] {
+  display: none;
+}
+@media (max-width: 700px) {
+  .disklib-remote-label {
+    display: none;
+  }
+}
+.remoteSyncDialog {
+  max-width: min(460px, calc(100vw - 32px));
+  width: 100%;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--sub-panel-border);
+  border-radius: 8px;
+  padding: 16px;
+}
+.remoteSyncDialog::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+.remote-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.remote-form h2 {
+  margin: 0;
+  font-size: var(--fs-base);
+}
+.remote-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--fs-xs);
+  color: var(--sub-panel-dim);
+}
+.remote-form input,
+.remote-form select {
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  background: var(--panel2);
+  border: 1px solid var(--sub-panel-border);
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+.remote-form label.remote-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.remote-form .remote-check input {
+  padding: 0;
+}
+.remote-actions .disklib-btn[hidden] {
+  display: none;
+}
+.remote-message {
+  margin: 0;
+  min-height: 1.2em;
+  font-size: var(--fs-xs);
+  color: var(--sub-panel-dim);
+}
+.remote-message.error {
+  color: var(--danger);
+}
+.remote-message.success {
+  color: #70d090;
+}
+.remote-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Console keys overlay: HELP/START/SELECT/OPTION/RESET, shown on hover. */
+.consoleKeys {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  height: 56px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 8px 12px 0;
+  pointer-events: auto;
+}
+
+.consoleKeysBar {
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 180ms ease, transform 180ms ease;
+  pointer-events: none;
+}
+
+.consoleKeys.visible .consoleKeysBar {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.consoleKey {
+  min-width: 64px;
+  height: 23px;
+  padding: 0 12px;
+  border: 2px solid #ffe04b;
+  border-radius: 2px;
+  background: rgba(255, 210, 48, 0.2);
+  box-shadow: 0 1px 7px rgba(0, 0, 0, 0.55);
+  color: #ffe04b;
+  font: 600 12px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Slanted sides, like the 65XE console keys. */
+  transform: skewX(-20deg);
+}
+
+/* Keep the label upright inside the slanted key. */
+.consoleKey span {
+  display: block;
+  transform: skewX(20deg);
+}
+
+.consoleKey:hover {
+  background: rgba(255, 210, 48, 0.32);
+}
+
+.consoleKey:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.consoleKey.pressed {
+  border-color: #ff9d2e;
+  color: #ff9d2e;
+  background: rgba(255, 132, 28, 0.22);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .consoleKeysBar {
+    transition: none;
+  }
+}
+
+/* Console keys on mobile: the bar spans 92% of the screen so no key is cut off,
+ * and the keys share that width with a finger-sized height. */
+@media (max-width: 780px) {
+  .consoleKeys {
+    height: 64px;
+    padding: 8px 0 0;
+    justify-content: center;
+  }
+
+  .consoleKeysBar {
+    width: 92%;
+    gap: 4px;
+  }
+
+  .consoleKey {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 34px;
+    padding: 0 2px;
+    font-size: 11px;
+    letter-spacing: 0;
+  }
+}
+
+/* Printer paper viewer: docked as the last tool panel, or floating over the page */
+.printerPanel {
+  width: 100%;
+  border: 1px solid var(--sub-panel-border);
+  border-radius: 6px;
+  background: var(--sub-panel-bg);
+  font-size: var(--fs-sm);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  align-self: stretch;
+  max-height: 60vh;
+}
+.layoutTools > .printerPanel {
+  order: 10;
+}
+.printerPanel[hidden] {
+  display: none;
+}
+.printerPanel.floating {
+  position: fixed;
+  z-index: 240;
+  width: min(560px, calc(100vw - 16px));
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+}
+.printerBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--sub-panel-header-bg);
+  border-bottom: 1px solid var(--sub-panel-border);
+  user-select: none;
+}
+.printerPanel.floating .printerBar {
+  cursor: move;
+  touch-action: none;
+}
+.printerIcon {
+  color: var(--accent);
+}
+.printerTitle {
+  white-space: nowrap;
+  font-weight: 600;
+  color: var(--text);
+}
+.printerBarSpacer {
+  flex: 1;
+}
+.printerCount {
+  white-space: nowrap;
+  color: var(--muted);
+}
+.printerPaper {
+  margin: 0;
+  padding: 8px 10px;
+  overflow: auto;
+  background: #fbfaf5;
+  color: #111;
+  font: 13px/1.25 "Courier New", monospace;
+  min-height: 80px;
+}
+.printerModel {
+  max-width: 120px;
+  font-size: inherit;
+}
+.printerPaper .ul {
+  text-decoration: underline;
+}
+.printerPaper .wide {
+  display: inline-block;
+  transform: scaleX(2);
+  transform-origin: left;
+}
+.printerPaper .sideways {
+  font-style: italic;
+}
+.printerPaper .dots {
+  display: block;
+}
+
+
+/* ---- PCE_ST additions ---- */
+.statusLine {
+  position: absolute;
+  left: 8px;
+  bottom: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font: 12px/1.4 "Roboto Condensed", sans-serif;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+.statusLine:empty { display: none; }
+#screen { touch-action: none; }
+.romName { font-weight: inherit; }
+
+/* ---- On-screen Atari ST keyboard ----
+   Two-tone like the original: light keycaps for characters, dark ones for
+   function and control keys, on a warm grey case. Sizes follow the keyboard's own
+   width (container query units), so it scales from a phone to a wide desktop. */
+.stKeyboard {
+  container-type: inline-size;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.stKeyboardCase {
+  --st-cols: 46;
+  --st-col: calc(100cqw / var(--st-cols));
+  --st-case-top: #cdc8ba;
+  --st-case-bottom: #b3ae9f;
+  --st-light-top: #eeeadc;
+  --st-light-bottom: #d8d3c3;
+  --st-dark-top: #6c695f;
+  --st-dark-bottom: #4a4841;
+  --st-ink-light: #1d1c19;
+  --st-ink-dark: #f0ecdf;
+  display: grid;
+  grid-template-columns: repeat(var(--st-cols), minmax(0, 1fr));
+  grid-auto-rows: calc(var(--st-col) * 2.1);
+  gap: calc(var(--st-col) * 0.2);
+  padding: calc(var(--st-col) * 0.9);
+  border-radius: calc(var(--st-col) * 0.9);
+  background: linear-gradient(180deg, var(--st-case-top), var(--st-case-bottom));
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.18),
+    0 10px 26px rgba(0, 0, 0, 0.4);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.stKey {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1em;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0.3em;
+  font: 700 calc(var(--st-col) * 0.78) / 1 "Roboto Condensed", "Arial Narrow", sans-serif;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 0.16em 0 rgba(0, 0, 0, 0.5), inset 0 0.1em 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.04s ease, filter 0.04s ease;
+}
+
+.stKey-light {
+  background: linear-gradient(180deg, var(--st-light-top), var(--st-light-bottom));
+  color: var(--st-ink-light);
+}
+
+.stKey-dark {
+  background: linear-gradient(180deg, var(--st-dark-top), var(--st-dark-bottom));
+  color: var(--st-ink-dark);
+}
+
+.stKey .stTop {
+  font-size: 0.82em;
+  opacity: 0.8;
+}
+
+.stKey .stMain {
+  white-space: nowrap;
+}
+
+/* The keys' own legends are smaller on the wide keys with names. */
+.stKey-dark .stMain {
+  font-size: 0.86em;
+  letter-spacing: 0.02em;
+}
+
+.stKey-char .stMain {
+  font-size: 1.05em;
+}
+
+.stKey i {
+  font-size: 0.95em;
+}
+
+.stKey.pressed,
+.stKey:active:not(:disabled) {
+  transform: translateY(0.1em);
+  filter: brightness(0.88);
+  box-shadow: 0 0.05em 0 rgba(0, 0, 0, 0.5), inset 0 0.1em 0.3em rgba(0, 0, 0, 0.35);
+}
+
+/* One-shot modifier (amber ring) and locked modifier (red ring with a dot). */
+.stKey.latched {
+  outline: 0.14em solid #f0b232;
+  outline-offset: -0.14em;
+}
+
+.stKey.locked {
+  outline: 0.14em solid #e0503c;
+  outline-offset: -0.14em;
+}
+
+.stKey.locked::after {
+  content: "";
+  position: absolute;
+  top: 0.22em;
+  right: 0.22em;
+  width: 0.38em;
+  height: 0.38em;
+  border-radius: 50%;
+  background: #e0503c;
+}
+
+.stKey:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.stKey:focus-visible {
+  outline: 0.14em solid #4a90e2;
+  outline-offset: 0.1em;
+}
+
+/* Narrow screens: drop the numeric keypad and keep a usable minimum key size
+   (the panel scrolls sideways if the screen is narrower still). */
+@container (max-width: 700px) {
+  .stKeyboardCase {
+    --st-cols: 38;
+    min-width: 560px;
+  }
+
+  .stKey-pad {
+    display: none;
+  }
+}
+
+/* The joystick body has a fixed size: its column fits it, and the keyboard takes the rest. */
+.inputPanelRow {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.joystickPanel {
+  width: auto;
+}
+@media (max-width: 980px) {
+  .inputPanelRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .joystickPanel {
+    width: 100%;
+  }
+}

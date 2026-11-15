@@ -89,6 +89,22 @@ them (`s ^ 0x8000`). The PSG stops completely while silent and delivers blocks o
 Available key names: see `web/keymap.js` (the ones the page uses) and PCE's
 `src/drivers/video/keys.c`. The ST's Help and Undo are `End` and `PageDown`.
 
+## Joystick
+
+PCE has no joystick input of its own: it emulates one with the **numeric keypad**.
+While that mode is on, `KP_8`/`KP_2`/`KP_4`/`KP_6` move the stick (`KP_7/9/1/3` are
+the diagonals) and `KP_0` fires; the keypad no longer types digits.
+
+| Function | Description |
+|---|---|
+| `void pce_st_set_keypad_joystick(unsigned mode)` | 0 = the keypad types as usual; 1 = joystick in port 1 (the standard joystick port); 2 = joystick in port 0 (shared with the mouse). |
+| `unsigned pce_st_get_keypad_joystick(void)` | The current mode. |
+| `unsigned pce_st_joystick_state(unsigned port)` | The IKBD's state for a port (0 or 1): bit 0 up, 1 down, 2 left, 3 right, 7 fire. Useful to test. |
+
+Send the keypad keys with `pce_st_key` (names `"KP_8"`, `"KP_2"`, `"KP_4"`, `"KP_6"`,
+`"KP_0"`). The mode is part of the machine's memory, so snapshots keep it; a new
+machine starts with mode 0.
+
 ## Media
 
 Floppies are mounted with PCE messages on files in the module's file system
