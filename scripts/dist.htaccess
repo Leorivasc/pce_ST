@@ -1,0 +1,22 @@
+# PCE_ST: Apache settings for the static site (needs mod_mime, mod_deflate, mod_expires, mod_headers;
+# the server must allow "AllowOverride FileInfo Options" for this folder, or copy this into the vhost).
+
+AddType application/wasm .wasm
+AddType text/javascript .js
+AddType application/octet-stream .img .st
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/wasm application/json image/svg+xml
+</IfModule>
+
+# Files are not fingerprinted: ask the browser to revalidate every time (cheap 304s)
+# so an update is picked up on the next reload.
+<IfModule mod_headers.c>
+  Header set Cache-Control "no-cache"
+</IfModule>
+
+# Nothing is cached without asking: the WASM core must always match the JavaScript next to it
+# (a cached older .wasm breaks floppy swapping and other features). "no-cache" still lets the
+# browser keep a copy and revalidate it with a cheap 304 when nothing changed.
+
+Options -Indexes
