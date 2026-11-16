@@ -195,6 +195,13 @@ revisions, trash, packages) is independent of the machine.
   several clusters. Loose `.prg` files uploaded alone are still wrapped one per floppy.
   The same builder is `media.buildFloppy` in the automation API.
 
+## Drive LEDs and saving
+
+The LED of each mounted device (A:/B:) blinks on `app.onDiskActivity` events (read, write);
+the yellow asterisk next to a file name only means the library has unsaved changes. A floppy is
+saved from the machine while the guest is writing, so the core refuses to flush while the
+controller is busy and the app retries after a little emulated time (NOTES, finding 28).
+
 ## Decisions
 
 - Package extension `.pcest`, format `pce-st-library-export`.

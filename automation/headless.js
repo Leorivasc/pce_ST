@@ -133,6 +133,7 @@ async function createHeadlessAutomation(options) {
   const floppies = [null, null];   // {name, bytes}
   const pressed = new Set();       // PCE key names currently down
   let joystickOn = false;
+  const swapGapMs = opts.swapGapMs === undefined ? 500 : opts.swapGapMs;
   const log = [];
 
   function requireMachine() {
@@ -155,9 +156,28 @@ async function createHeadlessAutomation(options) {
 
   function floppyFile(drive) { return "/disks/fd" + drive + ".st"; }
 
-  function mountIntoCore(drive) {
-    // Eject first: PCE saves a modified floppy on eject, and that would overwrite the new image.
+  // TOS notices a disk change through the write-protect line, which must stay up for a while
+  // with the drive empty (see pce_st_disk_hold_empty in st_glue.c): an eject records when
+  // the drive became empty, and inserting waits (emulated time) until it has been empty for
+  // `swapGapMs`. The page does the same.
+  const emptySince = [-1, -1];
+
+  function ejectFromCore(drive) {
     coreMsg("disk.eject", String(drive));
+    M._pce_st_disk_hold_empty(drive);
+    emptySince[drive] = M._pce_st_clock_count();
+  }
+
+  function mountIntoCore(drive, swap) {
+    // Eject first: PCE saves a modified floppy on eject, and that would overwrite the new image.
+    // (The eject also selects the drive the following insert goes to.)
+    if (swap) ejectFromCore(drive); else coreMsg("disk.eject", String(drive));
+    if (swap || emptySince[drive] >= 0) {
+      const waited = M._pce_st_clock_count() - emptySince[drive];
+      const gap = toCycles({ ms: swapGapMs });
+      if (waited < gap) advance(gap - waited);
+    }
+    emptySince[drive] = -1;
     M.FS.writeFile(floppyFile(drive), floppies[drive].bytes);
     return coreMsg("disk.insert", floppyFile(drive));
   }
@@ -165,13 +185,20 @@ async function createHeadlessAutomation(options) {
   function pullFloppy(drive) {
     const f = floppies[drive];
     if (!M || !f) return;
-    if (M._pce_st_disk_flush(drive) !== 0) return;
+    let r = M._pce_st_disk_flush(drive), stepped = false;
+    for (let i = 0; r === 2 && i < 200; i++) { M._pce_st_step_cycles(16000); stepped = true; r = M._pce_st_disk_flush(drive); }
+    if (stepped) M._pce_st_audio_clear();
+    if (r !== 0) return;
     f.bytes = new Uint8Array(M.FS.readFile(floppyFile(drive)));
   }
 
   async function startMachine(cfg, snapshotMemory) {
     const factory = require(CORE_JS);
     M = await factory({ print: function () {}, printErr: function (t) { log.push(String(t)); if (log.length > 200) log.shift(); } });
+    if (typeof M._pce_st_api_version !== "function" || M._pce_st_api_version() !== 4) {
+      M = null;
+      throw fail("build/out/pce_st_core.wasm is out of date: run scripts/build-core.sh", "core_mismatch");
+    }
     M.FS.writeFile("/tos.rom", romBytes);
     try { M.FS.mkdir("/disks"); } catch (e) { /* exists */ }
     M._pce_st_set_time(timeSetting);
@@ -183,6 +210,7 @@ async function createHeadlessAutomation(options) {
       M.HEAPU8.set(snapshotMemory);
     }
     pressed.clear();
+    emptySince[0] = emptySince[1] = -1;
     if (joystickOn) M._pce_st_set_keypad_joystick(1);
   }
 
@@ -339,8 +367,9 @@ async function createHeadlessAutomation(options) {
       else if (lower.endsWith(".msa")) { bytes = Buffer.from(PCE_STImage.decodeMsa(new Uint8Array(bytes))); outName = name.replace(/\.msa$/i, ".st"); }
       if (bytes.length % 512 !== 0 || bytes.length < 512) throw fail("A floppy image is a multiple of 512 bytes", "bad_image");
       if (M) pullFloppy(drive);
+      const hadDisk = !!floppies[drive];
       floppies[drive] = { name: outName, bytes: new Uint8Array(bytes) };
-      if (M) { const rc = mountIntoCore(drive); if (rc !== 0) throw fail("The machine did not accept the floppy (" + rc + ")", "mount_failed"); }
+      if (M) { const rc = mountIntoCore(drive, hadDisk); if (rc !== 0) throw fail("The machine did not accept the floppy (" + rc + ")", "mount_failed"); }
       return { drive: "AB"[drive], floppy: floppyInfo(drive) };
     },
     // Builds a 720K floppy from files { files: [{ name, path | base64 }], label, drive }; this
@@ -361,7 +390,7 @@ async function createHeadlessAutomation(options) {
       if (M) pullFloppy(drive);
       const f = floppies[drive];
       floppies[drive] = null;
-      if (M) coreMsg("disk.eject", String(drive));
+      if (M) ejectFromCore(drive);
       return { drive: "AB"[drive], ejected: !!f };
     },
     // The current image of a floppy (with the guest's changes). Writes it to `out` if given.

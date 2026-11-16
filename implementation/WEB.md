@@ -88,10 +88,17 @@ returns the machine. Events (`onEvent`): `{type: "state", state}`,
 
 `PCE_STAppProxy` (main thread, `app_proxy.js`) exposes the same method names; the
 ones that return data return promises. Extra members: `ready` (promise),
-`onStateChange/onStats/onLog/onError`, and synchronous getters (`getState`,
+`onStateChange/onStats/onLog/onError/onDiskActivity`, and synchronous getters (`getState`,
 `getVideoSize`, `getStats`, `hasMountedFloppy`, `getFloppyInfo`,
 `getAudioStatus`, ...). `window.PCE_ST_APP` is the live proxy (used by tests and
 the future automation API).
+
+Drive LEDs: the core reports floppy controller activity (`pce_st_disk_activity`); the worker
+emits `{type: "activity", activity: {deviceSlot, operation: "read"|"write"}}` and the proxy
+forwards it to `onDiskActivity`, which the library panel uses to blink the LED of the
+mounted device (A:/B:) for 900 ms.
+
+Saving a floppy (`pullFloppy`) waits for the controller to be idle (see NOTES, finding 28).
 
 ## Run loop
 
@@ -127,9 +134,9 @@ without this, turbo was no faster than real time).
 - The page sizes the canvas in CSS at a **4:3** aspect (the ST's monitors) and
   tells the worker the physical pixel size (`css size × devicePixelRatio`), so
   the filter works at the display's real resolution.
-- The CRT shader is the jsA8E one, which includes a composite-video color
-  bleeding stage. The ST normally used RGB or monochrome monitors; whether to
-  switch that stage off is a pending visual decision.
+- The CRT shader is the jsA8E one, unchanged, including its composite-video color
+  bleeding stage: kept on purpose because the STFM had a TV (composite) output
+  (decision of 2026-11-15, see `NOTES.md`).
 
 ## Audio
 

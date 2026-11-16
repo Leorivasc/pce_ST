@@ -221,6 +221,37 @@ void pce_st_reset (void)
 }
 
 /*
+ * Floppy activity for the page's drive LEDs: while the controller runs a command on a
+ * drive that holds a disk, the matching bit is set. pce_st_disk_activity returns the bits
+ * seen since the last call and clears them (bit 0 = A: read, 1 = A: write, 2 = B: read,
+ * 3 = B: write).
+ */
+static unsigned glue_fdc_activity = 0;
+
+static inline void glue_sample_fdc (void)
+{
+	wd179x_t *w = &par_sim->fdc.wd179x;
+	unsigned d, write;
+
+	if (w->status & 0x01) {
+		d = w->sel_drv & 1;
+		if (par_sim->fdc.img[d] != NULL) {
+			write = ((w->cmd & 0xe0) == 0xa0) || ((w->cmd & 0xf0) == 0xf0);
+			glue_fdc_activity |= 1U << (d * 2 + write);
+		}
+	}
+}
+
+EMSCRIPTEN_KEEPALIVE
+unsigned pce_st_disk_activity (void)
+{
+	unsigned a = glue_fdc_activity;
+
+	glue_fdc_activity = 0;
+	return (a);
+}
+
+/*
  * Advances n clock units (multiples of 16; 8 000 000 per second).
  */
 EMSCRIPTEN_KEEPALIVE
@@ -228,6 +259,7 @@ int pce_st_step_cycles (unsigned long n)
 {
 	while (n >= 16) {
 		st_clock (par_sim, 0);
+		glue_sample_fdc();
 		n -= 16;
 
 		if (par_sim->brk) {
@@ -255,6 +287,7 @@ int pce_st_step_frame (void)
 
 	for (guard = 0; guard < GLUE_GUARD_CYCLES; guard += 16) {
 		st_clock (par_sim, 0);
+		glue_sample_fdc();
 
 		if (par_sim->brk) {
 			audio_sync();
@@ -411,7 +444,8 @@ int pce_st_msg (const char *msg, const char *val)
  * file on eject or reset. pce_st_disk_flush saves it now, without ejecting, so
  * that JS can read the updated file. drive: 0 (A:) or 1 (B:).
  * Returns 0 if saved (or there were no changes), non-zero if there is no disk
- * or it failed.
+ * or it failed, 2 if the floppy controller is busy with a command (try again after
+ * running some more emulated time).
  */
 EMSCRIPTEN_KEEPALIVE
 int pce_st_disk_flush (unsigned drive)
@@ -420,6 +454,16 @@ int pce_st_disk_flush (unsigned drive)
 
 	if (drive > 1) {
 		return (1);
+	}
+
+	/*
+	 * Saving flushes the controller's track buffer, which throws away the state of a
+	 * command in progress: flushing while TOS is reading or writing makes the transfer
+	 * fail ("Data on the disk may be damaged") and can leave the drive unusable.
+	 * Wait for the controller to be idle; JS runs a little emulated time and retries.
+	 */
+	if (par_sim->fdc.wd179x.status & 0x01) {
+		return (2);
 	}
 
 	if (st_fdc_save (&par_sim->fdc, drive)) {
@@ -433,6 +477,35 @@ int pce_st_disk_flush (unsigned drive)
 	}
 
 	return (0);
+}
+
+/*
+ * Version of the pce_st_* interface. The page and the automation API check it when the
+ * module loads: a stale .wasm (cached by a browser or a server) next to newer JavaScript
+ * would otherwise fail in confusing ways (for example a drive left empty halfway through
+ * a swap). Raise it whenever a function JS depends on is added or changes meaning.
+ * 1 = original, 2 = pce_st_disk_hold_empty, 3 = pce_st_disk_flush returns 2 while busy, 4 = pce_st_disk_activity.
+ */
+EMSCRIPTEN_KEEPALIVE
+unsigned pce_st_api_version (void)
+{
+	return (4);
+}
+
+/*
+ * An empty drive reports "write protected", as a real one does. PCE only holds that
+ * state for 100 ms after an eject and then goes back to the removed disk's own value,
+ * so TOS (which notices a disk change through the write-protect line) never sees it.
+ * JS calls this right after ejecting, leaves the drive empty for a moment, and inserts
+ * the next disk: the line then changes when the disk arrives and TOS re-reads it.
+ */
+EMSCRIPTEN_KEEPALIVE
+void pce_st_disk_hold_empty (unsigned drive)
+{
+	if (drive < 2) {
+		par_sim->fdc.wprot[drive] = 1;
+		wd179x_set_wprot (&par_sim->fdc.wd179x, drive, 1);
+	}
 }
 
 /* 1 if the guest has written to the floppy since it was last saved. */

@@ -86,7 +86,7 @@ them (`s ^ 0x8000`). The PSG stops completely while silent and delivers blocks o
 | `unsigned pce_st_key_from_name(const char *name)` | Key code by name (`"a"`, `"Return"`, `"ESC"`, `"CtrlLeft"`, `"ShiftRight"`, `"Up"`, `"KP_Enter"`, ...). 0 if it does not exist. Resolves two cases PCE's table does not cover: `"i"` and `"ShiftRight"`. |
 | `void pce_st_mouse(int dx, int dy, unsigned buttons)` | **Relative** motion (positive = right/down) and button state: bit 0 left, bit 1 right, bit 2 middle. It can be called without motion (0, 0) to change only the buttons. |
 
-Available key names: see `web/keymap.js` (the ones the page uses) and PCE's
+Available key names: see `web/js/core/keymap.js` (the ones the page uses) and PCE's
 `src/drivers/video/keys.c`. The ST's Help and Undo are `End` and `PageDown`.
 
 ## Joystick
@@ -128,8 +128,22 @@ and PCE's stream formats are in the code but untested.
 | Function | Description |
 |---|---|
 | `int pce_st_msg(const char *msg, const char *val)` | Sends a PCE message. Returns 0 if accepted. Examples: `disk.eject`, `disk.insert`, `emu.pause`, `emu.reset`. `val` may be `NULL`. See `src/arch/atarist/msg.c`. |
-| `int pce_st_disk_flush(unsigned drive)` | Saves floppy A: (0) or B: (1) to its file **now**, without ejecting it. 0 = saved or no changes; 1 = no disk or failed. PCE only saves by itself on eject or reset. |
+| `unsigned pce_st_disk_activity(void)` | Floppy activity since the last call (then cleared): bit 0 = A: read, 1 = A: write, 2 = B: read, 3 = B: write. Sampled every 16 cycles while the controller runs a command on a drive that holds a disk. `PCE_STApp` turns it into `onDiskActivity` events for the drive LEDs of the library panel. |
+| `int pce_st_disk_flush(unsigned drive)` | Saves floppy A: (0) or B: (1) to its file **now**, without ejecting it. 0 = saved or no changes; 1 = no disk or failed; 2 = the floppy controller is busy with a command (flushing then would break the transfer: run some emulated time and retry). PCE only saves by itself on eject or reset. |
 | `int pce_st_disk_modified(unsigned drive)` | 1 if the guest has written since the last save. |
+| `void pce_st_disk_hold_empty(unsigned drive)` | Call right after `disk.eject`: the empty drive keeps reporting "write protected". See "Swapping floppies" below. |
+
+### Swapping floppies
+
+TOS notices a disk change through the drive's write-protect line. PCE raises it for only
+100 ms after an eject and then goes back to the removed disk's own value, so an eject followed
+by an insert (even seconds later) looked like "no change": the desktop kept showing the old
+disk's files. The
+procedure that works: `disk.eject`, `pce_st_disk_hold_empty`, **run the machine for at least
+~150 ms of emulated time** (the page and the automation API use 500 ms), then write the file
+and `disk.insert`. `disk.eject` also selects the drive that the next `disk.insert` goes to,
+so it must be sent even for a drive that is empty. Windows that are already open on the
+desktop are not redrawn by TOS (as on a real ST); reopening the drive shows the new disk.
 
 Guest writes to an emulated floppy are slow (creating a folder takes ~1200
 frames). After `pce_st_disk_flush`, read the file with `M.FS.readFile`.

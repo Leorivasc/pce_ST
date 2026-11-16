@@ -109,6 +109,15 @@
       renderer.paint(M.HEAPU8.subarray(p, p + w * h * 3), w, h);
     }
 
+    // Tells the page which drives the floppy controller worked on (for the drive LEDs).
+    function reportActivity() {
+      const act = M._pce_st_disk_activity();
+      if (!act) return;
+      for (let d = 0; d < 2; d++) {
+        if (act & (3 << (d * 2))) emit({ type: "activity", activity: { deviceSlot: d, operation: (act >> (d * 2)) & 2 ? "write" : "read" } });
+      }
+    }
+
     let lastPaintAt = 0;
 
     // Draws the last frame if it is new. Painting is decoupled from emulation: at
@@ -126,14 +135,38 @@
 
     // ---- core lifecycle ----
 
-    function mountIntoCore(drive) {
+    // TOS notices a disk change through the drive's write-protect line, which must stay up
+    // for a while with the drive empty (see pce_st_disk_hold_empty in st_glue.c). Every
+    // eject records when the drive became empty; inserting waits (in emulated time) until the
+    // drive has been empty for SWAP_GAP_CYCLES.
+    const CORE_API_VERSION = 4;           // see pce_st_api_version in st_glue.c
+    const SWAP_GAP_CYCLES = 4000000;      // 0.5 s of emulated time
+    const emptySince = [-1, -1];
+
+    function ejectFromCore(drive) {
+      coreMsg("disk.eject", String(drive));
+      M._pce_st_disk_hold_empty(drive);
+      emptySince[drive] = M._pce_st_clock_count();
+    }
+
+    function mountIntoCore(drive, swap) {
       const f = floppies[drive];
       if (!M || !f) return 1;
       try { M.FS.mkdir("/disks"); } catch (e) { /* already exists */ }
       const file = "/disks/fd" + drive + ".st";
       // Eject first: PCE saves the previous floppy to the file if the guest
       // modified it, and that would overwrite the new image if already written.
-      coreMsg("disk.eject", String(drive));
+      // (The eject also selects the drive the following insert goes to.)
+      if (swap) ejectFromCore(drive); else coreMsg("disk.eject", String(drive));
+      if (swap || emptySince[drive] >= 0) {
+        const waited = M._pce_st_clock_count() - emptySince[drive];
+        if (waited < SWAP_GAP_CYCLES) {
+          // Run the machine (not rendered or heard) through the rest of the gap.
+          M._pce_st_step_cycles(Math.ceil((SWAP_GAP_CYCLES - waited) / 16) * 16);
+          M._pce_st_audio_clear();
+        }
+      }
+      emptySince[drive] = -1;
       M.FS.writeFile(file, f.bytes);
       return coreMsg("disk.insert", file);
     }
@@ -149,11 +182,16 @@
     function pullFloppy(drive) {
       const f = floppies[drive];
       if (!M || !f) return;
-      if (M._pce_st_disk_flush(drive) !== 0) return;
+      let r = M._pce_st_disk_flush(drive), stepped = false;
+      // Busy controller (TOS is in the middle of a transfer): let the command finish first.
+      for (let i = 0; r === 2 && i < 200; i++) { M._pce_st_step_cycles(16000); stepped = true; r = M._pce_st_disk_flush(drive); }
+      if (stepped) M._pce_st_audio_clear();
+      if (r !== 0) return;
       try { f.bytes = new Uint8Array(M.FS.readFile("/disks/fd" + drive + ".st")); } catch (e) { /* keep the old bytes */ }
     }
 
     function disposeCore() {
+      emptySince[0] = emptySince[1] = -1;
       M = null;
       lastDrawnFrame = -1;
     }
@@ -169,6 +207,10 @@
         printErr: function (t) { emit({ type: "log", text: t }); },
       });
       if (token !== bootToken || disposed) return false;
+      if (typeof module._pce_st_api_version !== "function" || module._pce_st_api_version() !== CORE_API_VERSION) {
+        throw new Error("The emulator core (pce_st_core.wasm) does not match this page: it is a different version " +
+          "(a cached or not republished file). Reload ignoring the cache (Ctrl+Shift+R) or republish build/out/.");
+      }
       module.FS.writeFile("/tos.rom", rom);
       module._pce_st_set_time(-1);                       // real time
       const rc = withStr(module, root.PCE_STConfig.build({
@@ -226,6 +268,7 @@
         if (budgetMs > 2 * MAX_CATCHUP_MS) budgetMs = 0;
       }
 
+      reportActivity();
       drawIfNew();
       sendAudio();
 
@@ -388,8 +431,9 @@
       mountFloppy: function (drive, bytes, name) {
         const data = toBytes(bytes);
         if (!data || (drive !== 0 && drive !== 1)) return { ok: false, reason: "bad-arguments" };
+        const swap = !!floppies[drive];
         floppies[drive] = { name: name || ("disk_" + "AB"[drive] + ".st"), bytes: new Uint8Array(data) };
-        const rc = M ? mountIntoCore(drive) : 0;
+        const rc = M ? mountIntoCore(drive, swap) : 0;
         emitState();
         return { ok: rc === 0, rc: rc };
       },
@@ -397,7 +441,7 @@
         if (drive !== 0 && drive !== 1) return { ok: false, reason: "bad-arguments" };
         pullFloppy(drive);
         const bytes = floppies[drive] ? floppies[drive].bytes : null;
-        if (M) coreMsg("disk.eject", String(drive));
+        if (M) ejectFromCore(drive);
         floppies[drive] = null;
         emitState();
         return { ok: true, bytes: bytes };
@@ -474,6 +518,7 @@
           if (core._pce_st_step_frame() !== 0) return false;
           core._pce_st_audio_clear();
         }
+        reportActivity();
         drawIfNew();
         return true;
       },

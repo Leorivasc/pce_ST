@@ -34,8 +34,8 @@ Node, Python 3, make.
 
 ```bash
 scripts/build-core.sh                              # ~30 s -> build/out/
-node tests/core/core.test.js                       # 15 tests, ~35 s
-node tests/browser/browser.test.js                 # 25 tests in real Chrome, ~3 min
+node tests/core/core.test.js                       # 16 tests, ~35 s
+node tests/browser/browser.test.js                 # 38 tests in real Chrome, ~5 min
 node scripts/serve.js [port]                       # the page at http://127.0.0.1:8080/
 node tests/core/core.test.js --only=floppy         # a single test
 node tests/core/core.test.js /other/rom.img        # with another ROM
@@ -244,14 +244,14 @@ persistence and snapshots arrive in steps 3 and 4.
 
 ## What was verified and what was not
 
-Verified in Node (15 tests): EmuTOS boot to the desktop in mono (640×400) and in
+Verified in Node (16 tests): EmuTOS boot to the desktop in mono (640×400) and in
 color (320×200); determinism between instances; equivalence of stepping by cycles
 or by frames; audio at emulated-time pace; the PSG produces the programmed tone
 (279 Hz measured); mouse (motion and click); keyboard; mounting a `.st` created
 in JS, with TOS reading its directory; guest write recovered with
 `pce_st_disk_flush`; snapshot by memory dump; PCE messages.
 
-In the browser (real Chrome, 25 tests): self-start in real time (71 fps, 1.0×), the
+In the browser (real Chrome, 38 tests): self-start in real time (71 fps, 1.0×), the
 English UI, pause/resume, turbo, the real keyboard, end-to-end audio (silence,
 tone, back to silence), muting, the WebGL2 CRT filter and its button, the
 monitor and memory selectors (checked against TOS's `phystop`), floppy and ROM
@@ -320,6 +320,60 @@ does and where its reference is:
   press = right click). No "follow the host cursor" mode in the first version: it
   would require guessing the guest cursor's position (TOS/GEM-specific). The
   IKBD's absolute mode is only enabled by the guest software.
+
+## Finding 27: swapping floppies (2026-11-15)
+
+Replacing or exchanging disks kept showing the old disk's files in TOS. Cause: TOS detects a
+change from the write-protect line, which PCE holds up for only 100 ms after an eject and then
+restores to the old disk's value; eject+insert back to back (or even seconds apart) was
+invisible to it. Fix: `pce_st_disk_hold_empty` in the glue, plus a 0.5 s emulated-time gap
+between eject and insert in `PCE_STApp` and the automation API (details in `CORE_API.md`).
+Regression tests: headless desktop screenshots compared pixel by pixel with a machine that only
+ever had the second disk, and a check that A: and B: each show their own disk in any mount order.
+Note: an early version of the fix skipped the eject on a first mount and inserted B:'s image
+into A: (`disk.insert` goes to the drive of the last eject); the test for both drives covers it.
+
+## Finding 28: saving a floppy during a transfer (2026-11-16)
+
+Copying B: to A: failed with "Data on the disk in drive A: may be damaged" and the drive stayed
+unusable. Cause: `pce_st_disk_flush` (called by the library as soon as the guest changes a
+floppy) goes through `st_fdc_save`, which calls `wd179x_flush`; that clears the drive's track
+buffer, throwing away the state of a command TOS is in the middle of. Fix: the glue returns 2
+while the WD1772 is busy and `PCE_STApp`/the automation run a little emulated time and retry
+(interface version 3). Regression test: a copy with both drives saved every 5 frames (it fails
+without the busy check).
+
+## Finding 29: drive LEDs (2026-11-16)
+
+The library panel already blinked a LED on `app.onDiskActivity`, but the app never produced
+those events. `pce_st_disk_activity` (interface version 4) samples the WD1772 every 16 cycles
+(busy + command type + selected drive, only for a drive holding a disk); `PCE_STApp` emits the
+events from the run loop and from `stepFrames`. Browser test: the guest-write test checks for
+`0read` and `0write` events.
+
+## Finding 30: chained ROM switches are not serialized (2026-11-16, open, low priority)
+
+Found while investigating one intermittent failure of the browser test "a loaded ROM is kept in
+the ROM library and chosen again after a reload" (timed out waiting for "ROM removed"; it passed
+when rerun alone and in 5 further full runs of the suite, so 1 failure in 7 runs).
+
+- `switchRom` (`web/js/app/ui.js`) sets the ROM label **first** and then runs `loadRom`,
+  `powerCycle` and `start`; `chooseRom` refreshes the selector only when all of that is done.
+  Each switch is an independent async call, so two switches in a row overlap. The label changed in
+  about 25 ms, so it does not tell that the machine has restarted. The test waits for the label
+  and moves on, so it overlaps switches too.
+- Overlapping switches log `The machine is not ready (is a ROM loaded?)` (from `PCE_STApp`). With
+  the waits for "machine ready" between the steps the error did not appear (one run each).
+- Stress run in the browser console (30 switches 5 ms apart, last one asked for `kept_tos`): the
+  machine ended running with a ROM loaded, but the label said `EmuTOS` and the selector said
+  `kept_tos`. Which ROM was really running was not checked.
+- **Not shown:** that this is what made the test fail. A normal run of the same steps finishes in
+  ~185 ms, far below the test's 15 s limit, so the failing run needed something to stall.
+- **Priority:** low. Nobody switches ROMs several times within milliseconds, EmuTOS is the default
+  and few ROMs are kept. Nothing was changed in the code or in the test.
+- **If it is fixed:** queue the ROM switches so they run one at a time in the order asked, and
+  write the regression test first (several switches without waiting; label, selector and
+  `romLoaded` must match the last one asked; it must fail today).
 
 ## Next step (phase 2, after step 3)
 

@@ -92,6 +92,98 @@ test("input: the guest creates a folder on the floppy and the change comes back"
   assert.deepEqual(names, ["HELLO.TXT", "X"]);
 });
 
+// Opens the A: window twice (double click on the icon, twice) and returns a hash of its region.
+function openAndHash(api) {
+  api.system.run({ frames: 20 });
+  api.input.moveMouse({ dx: -300, dy: -170 });
+  api.input.moveMouse({ dx: 15, dy: 6 });
+  api.input.click({ double: true });
+  api.system.run({ frames: 200 });
+  return api;
+}
+
+function windowHash(api) {
+  const shot = api.artifacts.captureScreenshot();
+  return require("node:crypto").createHash("sha256").update(shot.png).digest("hex");
+}
+
+test("swapping a floppy makes TOS show the new disk (also with identical serial numbers)", async function () {
+  const one = makeBlankST("ONE", [{ name: "ONLYONE.TXT", data: "1" }]);
+  const two = makeBlankST("TWO", [{ name: "ONLYTWO.TXT", data: "2" }]);
+  // Reference: a machine that only ever had the second disk.
+  const ref = await desktop();
+  ref.media.mountFloppy({ drive: "A", bytes: two, name: "two.st" });
+  openAndHash(ref);
+  ref.input.click({ double: true }); ref.system.run({ frames: 200 });
+  // The same flow, but the first disk was mounted (and browsed) before the swap.
+  const api = await desktop();
+  api.media.mountFloppy({ drive: "A", bytes: one, name: "one.st" });
+  openAndHash(api);
+  const before = windowHash(api);
+  api.media.mountFloppy({ drive: "A", bytes: two, name: "two.st" });   // swap
+  api.system.run({ seconds: 2 });
+  api.input.click({ double: true }); api.system.run({ frames: 200 });
+  assert.notEqual(windowHash(api), before, "the window changed");
+  // The desktop is pixel-identical to the machine that only ever had the second disk.
+  assert.equal(windowHash(api), windowHash(ref), "the swapped machine shows the second disk's files");
+  // Eject then mount some time later works too, and the file system shows the right files.
+  api.media.ejectFloppy({ drive: "A" });
+  api.system.run({ seconds: 1 });
+  api.media.mountFloppy({ drive: "A", bytes: one, name: "one.st" });
+  assert.deepEqual(api.media.listFiles({ drive: "A" }).entries.map(function (e) { return e.name; }), ["ONLYONE.TXT"]);
+  // The core reports the swap in the emulated clock: the gap was run, not skipped.
+  const c0 = api.system.getState().clock;
+  api.media.mountFloppy({ drive: "A", bytes: two, name: "two.st" });
+  assert.ok(api.system.getState().clock - c0 >= 4000000, "half a second of emulated time passes during a swap");
+});
+
+test("both drives reach the guest: A: and B: each show their own disk, whatever the mount order", async function () {
+  const one = makeBlankST("ONE", [{ name: "ONLYONE.TXT", data: "1" }]);
+  const two = makeBlankST("TWO", [{ name: "ONLYTWO.TXT", data: "2" }]);
+  async function screen(first, second) {
+    const api = await desktop();
+    api.media.mountFloppy({ drive: first[0], bytes: first[1], name: "x.st" });
+    api.media.mountFloppy({ drive: second[0], bytes: second[1], name: "y.st" });
+    openAndHash(api);                                  // opens A:
+    api.input.moveMouse({ dx: 90, dy: 0 });
+    api.input.click({ double: true });                 // opens B:
+    api.system.run({ frames: 200 });
+    return windowHash(api);
+  }
+  const ab = await screen(["A", one], ["B", two]);
+  const ba = await screen(["B", two], ["A", one]);
+  const same = await screen(["A", one], ["B", one]);
+  assert.equal(ab, ba, "mounting B: first and A: second gives the same desktop");
+  assert.notEqual(ab, same, "B: shows its own disk, not A:'s");
+});
+
+test("saving a floppy while TOS is copying onto it does not disturb the transfer", async function () {
+  // The library saves a floppy as soon as the guest changes it, so a save can land in the
+  // middle of a transfer. The controller's track buffer must not be thrown away then.
+  const { createFloppy } = require("../../web/js/core/st_image.js");
+  const api = (await createHeadlessAutomation()).api;
+  await api.system.boot();
+  api.debug.runUntilStable({ stableFrames: 60, maxFrames: 4000, minDarkPercent: 30 });
+  api.media.mountFloppy({ drive: "A", bytes: makeBlankST("SRC", [{ name: "STRAID.PRG", data: Buffer.alloc(223056, 9) }]), name: "src.st" });
+  api.media.mountFloppy({ drive: "B", bytes: Buffer.from(createFloppy({ label: "PCE_ST" })), name: "dst.st" });
+  api.system.run({ frames: 20 });
+  api.input.moveMouse({ dx: -300, dy: -170 }); api.input.moveMouse({ dx: 15, dy: 6 });
+  api.input.click({ double: true }); api.system.run({ frames: 200 });
+  // Drag STRAID.PRG from the A: window onto the B: icon.
+  api.input.moveMouse({ dx: 30, dy: 120 });
+  api.input.mouse({ dx: 0, dy: 0, buttons: 1, after: { frames: 5 } });
+  for (let i = 0; i < 12; i++) api.input.mouse({ dx: 5, dy: -10, buttons: 1, after: { frames: 3 } });
+  api.system.run({ frames: 5 });
+  api.input.mouse({ dx: 0, dy: 0, buttons: 0 }); api.system.run({ frames: 120 });
+  api.input.key({ key: "Enter" });
+  for (let i = 0; i < 600; i++) {
+    api.system.run({ frames: 5 });
+    api.media.flushFloppy({ drive: "A" }); api.media.flushFloppy({ drive: "B" });
+  }
+  const entries = api.media.listFiles({ drive: "B" }).entries;
+  assert.deepEqual(entries.map(function (e) { return e.name + ":" + e.size; }), ["STRAID.PRG:223056"]);
+});
+
 test("input: typed characters reach the keyboard, the joystick reaches the IKBD", async function () {
   const api = await desktop();
   api.input.typeText({ text: "Hi" });          // needs Shift for H

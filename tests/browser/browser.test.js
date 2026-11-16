@@ -687,7 +687,7 @@ test("a change the guest makes to a mounted floppy is saved in the library", asy
   // Drive the desktop with the clock stopped between inputs (as the core tests do):
   // open A:, create a folder named X (Ctrl+N), then let the machine run again.
   await page.evaluate("(async function(){var A=PCE_ST_APP;await A.pause();var f=function(n){return A.stepFrames(n);};" +
-    "await f(20);" +
+    "window.__act=[];A.onDiskActivity(function(a){window.__act.push(a.deviceSlot+a.operation);});await f(20);" +
     "for(var i=0;i<6;i++){A.mouse(-50,-28,0);await f(2);} A.mouse(15,6,0); await f(8);" +
     "for(var k=0;k<2;k++){A.mouse(0,0,1);await f(2);A.mouse(0,0,0);await f(3);} await f(200);" +
     "var press=async function(c){A.onKeyDown(c);await f(4);A.onKeyUp(c);await f(4);};" +
@@ -715,6 +715,9 @@ test("a change the guest makes to a mounted floppy is saved in the library", asy
     console.log("machine floppy root:", JSON.stringify(listRoot(Buffer.from(image))));
   }
   assert.deepStrictEqual(names, ["HELLO.TXT", "X"]);
+  // The drive LED follows the controller: reading the directory and writing the folder.
+  const acts = await page.evaluate("window.__act");
+  assert.ok(acts.indexOf("0read") >= 0 && acts.indexOf("0write") >= 0, "disk activity was reported: " + JSON.stringify(acts.slice(0, 5)));
   await page.evaluate("PCE_ST_LIBRARY.unmountFile(window.__gid).then(function(){return PCE_ST_LIBRARY.deleteFile(window.__gid);})");
   await page.close();
 });

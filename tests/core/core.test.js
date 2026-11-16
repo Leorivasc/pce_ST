@@ -313,6 +313,11 @@ test("the joystick is driven by the numeric keypad while joystick mode is on", a
   release("KP_6");
 });
 
+test("the core reports its interface version (the page refuses a mismatched .wasm)", async function () {
+  const core = await createCore();
+  assert.strictEqual(core.M._pce_st_api_version(), 4);
+});
+
 test("PCE messages work (emu.pause is accepted, an unknown message is not)", async function () {
   const core = await createCore();
   assert.strictEqual(core.msg("emu.pause", "0"), 0);

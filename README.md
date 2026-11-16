@@ -139,9 +139,9 @@ theme by default.
 ## Tests
 
 ```bash
-node tests/core/core.test.js        # core in Node: 15 tests, ~35 s
+node tests/core/core.test.js        # core in Node: 16 tests, ~35 s
 for t in library_archive library_package disk_library st_image snapshot_codec gamepad remote_workspace remote_library remote_library_metadata remote_library_tombstones remote_library_prg_blobs; do node tests/library/$t.test.js; done   # library, seconds
-node tests/automation/headless.test.js  # automation API: 8 tests, ~25 s
+node tests/automation/headless.test.js  # automation API: 12 tests, ~80 s
 node tests/automation/mcp.test.js       # MCP server over stdio, ~10 s
 node tests/browser/browser.test.js  # page in real Chrome: 38 tests, ~5 min
 ```
@@ -203,6 +203,7 @@ build/               Build output (not versioned)
   **Read it before planning** and update it after every improvement.
 - `NOTICE.md` and `COPYING`: license and attributions.
 - `implementation/CORE_API.md`: reference for the core's functions (`pce_st_*`).
+- `DEPLOY.md`: publishing on an Apache server (static files, WebDAV and CORS).
 - `AUTOMATION.md`: headless automation API and MCP server (for scripts, tests and AI tools).
 - `implementation/WEB.md`: page architecture, the `PCE_STApp` API, run loop,
   rendering, input and UI.

@@ -22,7 +22,7 @@
   function create(opts) {
     const options = opts || {};
     const canvas = options.canvas;
-    const listeners = { state: [], stats: [], log: [], error: [] };
+    const listeners = { state: [], stats: [], log: [], error: [], activity: [] };
     const pending = new Map();
     const pressedKeys = new Set();
     let nextId = 1;
@@ -52,6 +52,7 @@
     function applyEvent(event) {
       if (event.type === "state") { state = event.state; emit("state", state); }
       else if (event.type === "stats") { lastStats = event.stats; emit("stats", lastStats); }
+      else if (event.type === "activity") emit("activity", event.activity);
       else if (event.type === "log") emit("log", event.text);
     }
 
@@ -131,6 +132,7 @@
       ready: ready,
       onStateChange: function (fn) { listeners.state.push(fn); return function () { listeners.state = listeners.state.filter(function (f) { return f !== fn; }); }; },
       onStats: function (fn) { listeners.stats.push(fn); },
+      onDiskActivity: function (fn) { listeners.activity.push(fn); },
       onLog: function (fn) { listeners.log.push(fn); },
       onError: function (fn) { listeners.error.push(fn); },
 

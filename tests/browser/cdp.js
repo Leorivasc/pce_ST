@@ -250,4 +250,4 @@ async function launch(options) {
   };
 }
 
-module.exports = { launch: launch };
+module.exports = { launch: launch, wsConnect: wsConnect };
