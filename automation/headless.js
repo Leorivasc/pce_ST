@@ -154,7 +154,11 @@ async function createHeadlessAutomation(options) {
     });
   }
 
-  function floppyFile(drive) { return "/disks/fd" + drive + ".st"; }
+  // Pasti (.stx) images are read-only: PCE loads them but its STX writer always fails and
+  // leaves an empty file. They are mounted under a .stx name (PCE picks the format from the
+  // extension), never saved back, and `readFloppy` returns the original bytes.
+  function isStx(f) { return !!f && /\.stx$/i.test(f.name || ""); }
+  function floppyFile(drive) { return "/disks/fd" + drive + (isStx(floppies[drive]) ? ".stx" : ".st"); }
 
   // TOS notices a disk change through the write-protect line, which must stay up for a while
   // with the drive empty (see pce_st_disk_hold_empty in st_glue.c): an eject records when
@@ -184,7 +188,7 @@ async function createHeadlessAutomation(options) {
 
   function pullFloppy(drive) {
     const f = floppies[drive];
-    if (!M || !f) return;
+    if (!M || !f || isStx(f)) return;
     let r = M._pce_st_disk_flush(drive), stepped = false;
     for (let i = 0; r === 2 && i < 200; i++) { M._pce_st_step_cycles(16000); stepped = true; r = M._pce_st_disk_flush(drive); }
     if (stepped) M._pce_st_audio_clear();
@@ -268,7 +272,7 @@ async function createHeadlessAutomation(options) {
 
   function floppyInfo(drive) {
     const f = floppies[drive];
-    return f ? { name: f.name, size: f.bytes.length, modified: !!(M && M._pce_st_disk_modified(drive)) } : null;
+    return f ? { name: f.name, size: f.bytes.length, modified: !!(M && !isStx(f) && M._pce_st_disk_modified(drive)), readOnly: isStx(f) } : null;
   }
 
   function darkPercent(v) {
@@ -343,7 +347,7 @@ async function createHeadlessAutomation(options) {
         apiVersion: API_VERSION,
         groups: ["system", "media", "input", "debug", "artifacts"],
         actions: { system: Object.keys(system), media: Object.keys(media), input: Object.keys(input), debug: Object.keys(debug), artifacts: Object.keys(artifacts) },
-        formats: ["st", "msa", "prg"],
+        formats: ["st", "msa", "prg", "stx"],
         models: ["st", "mega"],
         deterministic: true,
         node: process.version,
@@ -355,7 +359,8 @@ async function createHeadlessAutomation(options) {
 
   const media = {
     // Mounts a floppy in A: or B:. { drive: "A"|"B"|0|1, path | base64, name }.
-    // .msa is converted to .st; .prg is wrapped in a generated floppy.
+    // .msa is converted to .st; .prg is wrapped in a generated floppy; .stx (Pasti) is
+    // mounted as it is, read-only (a guest write is not kept).
     mountFloppy: function (a) {
       const drive = parseDrive(a && a.drive);
       let bytes = readBinary(a, resolvePath);
@@ -365,7 +370,9 @@ async function createHeadlessAutomation(options) {
       let outName = name;
       if (lower.endsWith(".prg")) { bytes = Buffer.from(PCE_STImage.createFloppy({ files: [{ name: name, data: bytes }] })); outName = name.replace(/\.prg$/i, ".st"); }
       else if (lower.endsWith(".msa")) { bytes = Buffer.from(PCE_STImage.decodeMsa(new Uint8Array(bytes))); outName = name.replace(/\.msa$/i, ".st"); }
-      if (bytes.length % 512 !== 0 || bytes.length < 512) throw fail("A floppy image is a multiple of 512 bytes", "bad_image");
+      if (lower.endsWith(".stx")) {
+        if (bytes.length < 16 || Buffer.from(bytes).readUInt32BE(0) !== 0x52535900) throw fail("Not a Pasti .stx image (bad header)", "bad_image");
+      } else if (bytes.length % 512 !== 0 || bytes.length < 512) throw fail("A floppy image is a multiple of 512 bytes", "bad_image");
       if (M) pullFloppy(drive);
       const hadDisk = !!floppies[drive];
       floppies[drive] = { name: outName, bytes: new Uint8Array(bytes) };
@@ -440,6 +447,7 @@ async function createHeadlessAutomation(options) {
     if (M) pullFloppy(drive);
     const f = floppies[drive];
     if (!f) throw fail("No floppy in " + "AB"[drive] + ":", "no_floppy");
+    if (isStx(f)) throw fail("The files of a Pasti .stx image cannot be listed: it is not a plain FAT12 image", "unsupported_format");
     const volume = PCE_STImage.openVolume(f.bytes);
     if (!volume) throw fail("The floppy has no FAT12 file system", "no_filesystem");
     return volume;

@@ -71,8 +71,9 @@ async function createCore(options) {
     // Mounts an image in A: (drive 0) or B: (drive 1) from JS bytes.
     // Eject first: PCE saves the previous floppy to the file if the guest
     // modified it, and that would overwrite the new image if it were already written.
-    mountFloppy: function (drive, bytes) {
-      const file = "/disks/fd" + drive + ".st";
+    // `ext` ("st" by default) is the file extension: PCE picks the image format from it.
+    mountFloppy: function (drive, bytes, ext) {
+      const file = "/disks/fd" + drive + "." + (ext || "st");
       try { M.FS.mkdir("/disks"); } catch (e) { /* ya existe */ }
       core.msg("disk.eject", String(drive));
       M.FS.writeFile(file, bytes);

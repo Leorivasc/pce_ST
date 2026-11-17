@@ -127,6 +127,9 @@ theme by default.
   ST-specific keys: **Help = End**, **Undo = Page Down** (there is no Page Up).
   While the mouse is captured, `Esc` releases it and does not reach the
   program; with the mouse released and the screen focused it does.
+- **Pasti `.stx` images** (copy-protected games) open like any other floppy, but are
+  **read-only**: what the program writes is lost, nothing is saved back, and the file view
+  of the library is not available for them. Some protections may still fail (see `NOTES.md`).
 - **Floppies**: whatever the program writes to A: stays in memory; use the
   download button to get the updated image. Mounting another image replaces the
   previous one **without downloading** anything that was modified: save first.
@@ -139,11 +142,11 @@ theme by default.
 ## Tests
 
 ```bash
-node tests/core/core.test.js        # core in Node: 16 tests, ~35 s
-for t in library_archive library_package disk_library st_image snapshot_codec gamepad remote_workspace remote_library remote_library_metadata remote_library_tombstones remote_library_prg_blobs; do node tests/library/$t.test.js; done   # library, seconds
-node tests/automation/headless.test.js  # automation API: 12 tests, ~80 s
+node tests/core/core.test.js        # core in Node: 19 tests, ~35 s
+for t in library_archive library_package disk_library st_image snapshot_codec gamepad remote_workspace remote_library remote_library_metadata remote_library_tombstones remote_library_prg_blobs stx_library; do node tests/library/$t.test.js; done   # library, seconds
+node tests/automation/headless.test.js  # automation API: 13 tests, ~80 s
 node tests/automation/mcp.test.js       # MCP server over stdio, ~10 s
-node tests/browser/browser.test.js  # page in real Chrome: 38 tests, ~5 min
+node tests/browser/browser.test.js  # page in real Chrome: 39 tests, ~5 min
 ```
 
 - Both need `scripts/build-core.sh` to have been run first.

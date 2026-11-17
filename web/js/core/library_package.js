@@ -214,8 +214,8 @@
       if (!validId(entry.id) || ids.has(entry.id)) fail("duplicate or invalid entry id");
       ids.add(entry.id);
       if (typeof entry.name !== "string" || !entry.name || entry.name.includes("/")) fail("invalid entry name");
-      if (entry.type !== "st" && entry.type !== "prg") fail("unsupported entry type");
-      if (!/^blobs\/[0-9a-f]{64}\.(st|prg)$/.test(entry.path)) fail("invalid blob path");
+      if (entry.type !== "st" && entry.type !== "prg" && entry.type !== "stx") fail("unsupported entry type");
+      if (!/^blobs\/[0-9a-f]{64}\.(st|prg|stx)$/.test(entry.path)) fail("invalid blob path");
       if (entry.path.endsWith("." + entry.type) === false) fail("blob type mismatch");
       // Multiple library entries may intentionally reference the same
       // content-addressed blob. The archive stores that binary once while
@@ -232,7 +232,7 @@
         entry.revisions.forEach(function (revision) {
           if (!revision || !validId(revision.id) || revisionIds.has(revision.id)) fail("invalid revision id");
           revisionIds.add(revision.id);
-          if (!/^blobs\/[0-9a-f]{64}\.(st|prg)$/.test(revision.path)) fail("invalid revision blob path");
+          if (!/^blobs\/[0-9a-f]{64}\.(st|prg|stx)$/.test(revision.path)) fail("invalid revision blob path");
           if (!revision.path.endsWith("." + entry.type)) fail("revision blob type mismatch");
           if (!Number.isInteger(revision.size) || revision.size < 0) fail("invalid revision size");
           if (!/^[0-9a-f]{64}$/.test(revision.sha256) || revision.sha256 !== revision.path.substring(6, 70)) fail("invalid revision sha256");
@@ -262,7 +262,7 @@
       const bytes = cloneBytes(record.bytes);
       const hash = sha256(bytes);
       const type = String(record.format || "").toLowerCase();
-      if (type !== "st" && type !== "prg") fail("unsupported record type");
+      if (type !== "st" && type !== "prg" && type !== "stx") fail("unsupported record type");
       const result = {
         id: String(record.id || ""),
         name: String(record.name || ""),

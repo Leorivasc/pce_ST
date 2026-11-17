@@ -334,7 +334,11 @@
     });
 
     PCE_STDiskLibraryUI.init({
-      app: { getDiskLibrary: function () { return library; } },
+      app: {
+        getDiskLibrary: function () { return library; },
+        // The drive LEDs of the panel follow the floppy controller (events from the core).
+        onDiskActivity: function (fn) { app.onDiskActivity(fn); },
+      },
       panel: diskLibraryPanel,
       button: btnDiskLibrary,
     });
@@ -582,7 +586,9 @@
     function updateFloppyUi() {
       const info = app.getFloppyInfo(0);
       btnSaveFloppy.disabled = !info;
-      btnSaveFloppy.title = info
+      btnSaveFloppy.title = info && info.readOnly
+        ? "Download the original Pasti image of floppy A: (" + info.name + "). It is read-only: the changes the program makes are not saved."
+        : info
         ? "Save floppy A: (" + info.name + ") with the changes the program made, as a .st file."
         : "Save floppy A: as a .st file (no floppy is mounted).";
       $("toolbarDiskOpen").title = info
@@ -811,7 +817,7 @@
       const url = URL.createObjectURL(new Blob([floppy.bytes], { type: "application/octet-stream" }));
       const a = document.createElement("a");
       a.href = url;
-      a.download = floppy.name.replace(/\.[^.]*$/, "") + ".st";
+      a.download = /\.stx$/i.test(floppy.name) ? floppy.name : floppy.name.replace(/\.[^.]*$/, "") + ".st";
       document.body.appendChild(a);
       a.click();
       a.remove();

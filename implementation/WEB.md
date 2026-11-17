@@ -213,7 +213,9 @@ value played since the last report; 0 = exact silence). The proxy creates the
   and export/import of `.pcest` packages. The library is `window.PCE_ST_LIBRARY`
   (see `LIBRARY.md`). A *View the files* button opens a read-only FAT12 view
   (folders, preview, per-file download). `.msa` files are converted to `.st` when
-  added. Remote sync (WebDAV) is in the title bar; two buttons build a floppy from files or
+  added. Pasti `.stx` images are stored as they are and mounted **read-only** (the app keeps the
+  original bytes, never saves them back and reports `readOnly: true` and never `modified`;
+  the library creates no revisions for them and the file view is not available for them). Remote sync (WebDAV) is in the title bar; two buttons build a floppy from files or
   from a folder.
 - **Snapshots panel** (camera button): *Quick slot* save/restore (IndexedDB
   `pce_st_snapshots`) and export/import of `.pcestsnap` files. A snapshot holds the

@@ -77,7 +77,7 @@
         backend: renderer ? renderer.backend : "none",
         floppies: floppies.map(function (f, drive) {
           if (!f) return null;
-          return { name: f.name, size: f.bytes.length, modified: !!(M && M._pce_st_disk_modified(drive)) };
+          return { name: f.name, size: f.bytes.length, modified: isModified(drive), readOnly: isStx(f) };
         }),
       };
     }
@@ -149,11 +149,19 @@
       emptySince[drive] = M._pce_st_clock_count();
     }
 
+    // Pasti (.stx) images are read-only: PCE can load them but not save them (its STX writer
+    // always fails and leaves an empty file). The page keeps the original bytes, mounts them
+    // under a .stx name (PCE picks the format from the extension) and never asks the core to
+    // save them. A guest write only lives in the machine's memory until the disk is ejected.
+    function isStx(f) { return !!f && /\.stx$/i.test(f.name || ""); }
+    function floppyFile(drive) { return "/disks/fd" + drive + (isStx(floppies[drive]) ? ".stx" : ".st"); }
+    function isModified(drive) { return !!(M && floppies[drive] && !isStx(floppies[drive]) && M._pce_st_disk_modified(drive)); }
+
     function mountIntoCore(drive, swap) {
       const f = floppies[drive];
       if (!M || !f) return 1;
       try { M.FS.mkdir("/disks"); } catch (e) { /* already exists */ }
-      const file = "/disks/fd" + drive + ".st";
+      const file = floppyFile(drive);
       // Eject first: PCE saves the previous floppy to the file if the guest
       // modified it, and that would overwrite the new image if already written.
       // (The eject also selects the drive the following insert goes to.)
@@ -181,13 +189,13 @@
     // Saves the guest's changes to a floppy into floppies[drive].bytes.
     function pullFloppy(drive) {
       const f = floppies[drive];
-      if (!M || !f) return;
+      if (!M || !f || isStx(f)) return;     // read-only: the original bytes stay as they are
       let r = M._pce_st_disk_flush(drive), stepped = false;
       // Busy controller (TOS is in the middle of a transfer): let the command finish first.
       for (let i = 0; r === 2 && i < 200; i++) { M._pce_st_step_cycles(16000); stepped = true; r = M._pce_st_disk_flush(drive); }
       if (stepped) M._pce_st_audio_clear();
       if (r !== 0) return;
-      try { f.bytes = new Uint8Array(M.FS.readFile("/disks/fd" + drive + ".st")); } catch (e) { /* keep the old bytes */ }
+      try { f.bytes = new Uint8Array(M.FS.readFile(floppyFile(drive))); } catch (e) { /* keep the old bytes */ }
     }
 
     function disposeCore() {
@@ -284,7 +292,7 @@
         emit({ type: "stats", stats: lastStats });
         // Tell the page about unsaved floppy changes, every tick while there are any (a write
         // right after a save must not be missed) and when they stop.
-        const modifiedNow = floppies.map(function (f, d) { return !!f && !!M._pce_st_disk_modified(d); }).join();
+        const modifiedNow = floppies.map(function (f, d) { return isModified(d); }).join();
         if (modifiedNow !== lastModified || modifiedNow.indexOf("true") >= 0) { lastModified = modifiedNow; emitState(); }
         stats = { windowStart: now, frames: 0, emulatedMs: 0 };
       }

@@ -3,7 +3,7 @@
 
   /* The ST has two floppy drives: A: (slot 0) and B: (slot 1). */
   const DRIVE_COUNT = 2;
-  const SUPPORTED_EXTENSIONS = new Set(["st", "prg", "msa"]);
+  const SUPPORTED_EXTENSIONS = new Set(["st", "prg", "msa", "stx"]);
 
   function extension(name) {
     const value = String(name || "");
@@ -286,6 +286,7 @@
         const activeActivity = mountedActivity.get(info.mountedSlot);
         activity.className = "disklib-mounted-activity" +
           (activeActivity ? " active " + activeActivity.className : "");
+        activity.dataset.slot = String(info.mountedSlot);
         activity.title = activeActivity
           ? activeActivity.title
           : "No active media operation";
@@ -473,6 +474,10 @@
     }
 
     function openContents(info) {
+      if (info.format === "stx") {
+        setStatus("A Pasti .stx image is not a plain FAT12 floppy: its files cannot be listed", "error");
+        return;
+      }
       setStatus("Reading " + info.name + "...", "busy");
       library.downloadFile(info.id).then(function (result) {
         const bytes = new Uint8Array(result.buffer);
@@ -547,6 +552,16 @@
       if (countEl) countEl.textContent = items.length + (items.length === 1 ? " trashed item" : " trashed items");
       if (totalEl) totalEl.textContent = formatSize(items.reduce(function (sum, item) { return sum + (item.size | 0); }, 0)) + " recoverable";
       updateToolbar();
+    }
+
+    // Updates the activity LED of a drive in place (the panel is not rebuilt).
+    function paintActivity(slot) {
+      const active = mountedActivity.get(slot);
+      panel.querySelectorAll('.disklib-mounted-activity[data-slot="' + slot + '"]').forEach(function (led) {
+        led.className = "disklib-mounted-activity" + (active ? " active " + active.className : "");
+        led.title = active ? active.title : "No active media operation";
+        led.setAttribute("aria-label", led.title);
+      });
     }
 
     function render() {
@@ -892,7 +907,7 @@
         empty.className = "disklib-empty";
         empty.innerHTML = searching
           ? '<i class="fa-solid fa-magnifying-glass"></i><br>No matching ST or PRG files'
-          : '<i class="fa-solid fa-floppy-disk"></i><br>No ST or PRG files in the library';
+          : '<i class="fa-solid fa-floppy-disk"></i><br>No ST, STX or PRG files in the library';
         listEl.appendChild(empty);
       }
 
@@ -907,7 +922,7 @@
         return SUPPORTED_EXTENSIONS.has(extension(file.name));
       });
       if (supported.length !== input.length) {
-        setStatus("Only ST, MSA and PRG files can be added", "error");
+        setStatus("Only ST, STX, MSA and PRG files can be added", "error");
       }
       return supported.reduce(function (chain, file) {
         return chain.then(function () {
@@ -944,7 +959,7 @@
                   : Promise.resolve(null))
                 : library.addFile(fileName, buffer, targetFolderId);
               return Promise.resolve(operation).then(function () {
-                setStatus("Added " + fileName, "success");
+                setStatus("Added " + fileName + (/\.stx$/i.test(fileName) ? " (Pasti image: read-only, changes are not saved)" : ""), "success");
               });
             });
           });
@@ -1347,17 +1362,21 @@
           operation.indexOf("error") >= 0 || operation.indexOf("fail") >= 0;
         const write = !error && (operation === "write" || operation === "format");
         const state = error ? "error" : (write ? "write" : "read");
-        mountedActivity.set(slot, {
+        const next = {
           className: "disklib-activity-" + state,
           title: error ? "Media error" : (write ? "Writing" : "Reading"),
-        });
+        };
+        const previous = mountedActivity.get(slot);
+        mountedActivity.set(slot, next);
         if (mountedActivityTimers.has(slot)) clearTimeout(mountedActivityTimers.get(slot));
         mountedActivityTimers.set(slot, setTimeout(function () {
           mountedActivity.delete(slot);
           mountedActivityTimers.delete(slot);
-          render();
+          paintActivity(slot);
         }, 900));
-        render();
+        // Only the LED changes. Rebuilding the whole panel on every event (they arrive on every
+        // tick while a game loads) restarted the blink animation each time, so the LED never lit.
+        if (!previous || previous.className !== next.className) paintActivity(slot);
       });
     }
     render();

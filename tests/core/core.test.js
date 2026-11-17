@@ -13,6 +13,7 @@ const assert = require("assert");
 const path = require("path");
 const { createCore, writePng } = require("./harness.js");
 const { makeBlankST, listRoot } = require("./stimage.js");
+const { stFromToStx } = require("./stximage.js");
 
 const OUT = path.join(__dirname, "..", "..", "build", "out");
 const BOOT_FRAMES = 1600; // EmuTOS reaches the desktop around frame ~1300 (mono)
@@ -241,6 +242,59 @@ test("mounting another image over a modified floppy does not mix the contents", 
   core.stepFrames(20);
   assert.strictEqual(core.diskFlush(0), 0);
   assert.ok(core.readFloppy(0).equals(two), "after mounting the second image, the floppy is exactly that image");
+});
+
+test("a .stx (Pasti) floppy shows the same files as the same image mounted as .st", async function () {
+  const st = makeBlankST("TESTDISK", [{ name: "HELLO.TXT", data: "hello atari st\r\n" }, { name: "DATA.BIN", data: Buffer.alloc(3000, 7) }]);
+  const asSt = await bootDesktop();
+  assert.strictEqual(asSt.mountFloppy(0, st), 0);
+  asSt.stepFrames(20);
+  openDriveA(asSt);
+  const asStx = await bootDesktop();
+  assert.strictEqual(asStx.mountFloppy(0, stFromToStx(st), "stx"), 0);
+  asStx.stepFrames(20);
+  openDriveA(asStx);
+  const a = asSt.video(), b = asStx.video();
+  assert.strictEqual(diffPixels(a, b, WINDOW[0], WINDOW[1], WINDOW[2], WINDOW[3]), 0, "the A: window is identical");
+  // Control: a different image does change the window, so the comparison can fail.
+  const other = await bootDesktop();
+  other.mountFloppy(0, stFromToStx(makeBlankST("OTHER", [{ name: "ONLY.TXT", data: "x" }])), "stx");
+  other.stepFrames(20);
+  openDriveA(other);
+  assert.ok(diffPixels(a, other.video(), WINDOW[0], WINDOW[1], WINDOW[2], WINDOW[3]) > 200, "another .stx shows other files");
+});
+
+test("a .stx floppy with a bad data CRC and a missing sector still lists its files", async function () {
+  const st = makeBlankST("TESTDISK", [{ name: "HELLO.TXT", data: "hello" }]);
+  const clean = await bootDesktop();
+  clean.mountFloppy(0, stFromToStx(st), "stx");
+  clean.stepFrames(20);
+  openDriveA(clean);
+  const core = await bootDesktop();
+  // Sectors far from the boot sector, FAT and root directory (the first 14 sectors of track 0).
+  const stx = stFromToStx(st, { badCrc: [{ track: 40, side: 0, sector: 3 }], noData: [{ track: 41, side: 1, sector: 9 }] });
+  assert.strictEqual(core.mountFloppy(0, stx, "stx"), 0, "PCE accepts the image");
+  core.stepFrames(20);
+  openDriveA(core);
+  assert.strictEqual(diffPixels(clean.video(), core.video(), WINDOW[0], WINDOW[1], WINDOW[2], WINDOW[3]), 0, "the files are listed as on the clean image");
+});
+
+test("a guest write on a .stx floppy does not block mounting the next floppy", async function () {
+  const core = await bootDesktop();
+  core.mountFloppy(0, stFromToStx(makeBlankST("ONE", [{ name: "HELLO.TXT", data: "hello" }])), "stx");
+  core.stepFrames(20);
+  openDriveA(core);
+  const ctrl = core.keyCode("Ctrl");
+  core.key(1, ctrl); core.stepFrames(3); typeKey(core, "n"); core.key(2, ctrl); core.stepFrames(60);
+  typeKey(core, "x"); typeKey(core, "Return");
+  core.stepFrames(1200);
+  assert.strictEqual(core.diskModified(0), true, "the machine accepted the write (it only lives in memory)");
+
+  const two = makeBlankST("TWO", [{ name: "OTHER.TXT", data: "different" }]);
+  assert.strictEqual(core.mountFloppy(0, two), 0);
+  core.stepFrames(20);
+  assert.strictEqual(core.diskFlush(0), 0);
+  assert.ok(core.readFloppy(0).equals(two), "the next floppy is mounted and holds exactly its own image");
 });
 
 test("snapshot: dumping WASM memory and restoring it in another instance continues identically", async function () {

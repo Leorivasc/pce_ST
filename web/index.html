@@ -108,8 +108,8 @@
               <input type="file" id="romInput" accept=".img,.rom,application/octet-stream" />
               <span><b id="romName" class="romName">EmuTOS</b> <i id="romStatus" class="rom-status-led" aria-hidden="true"></i></span>
             </label>
-            <label id="toolbarDiskOpen" class="fileBtn diskOpenBtn" title="Open a floppy disk image (.st, .msa) or a program (.prg) in drive A:.">
-              <input type="file" id="disk1" aria-label="Open floppy disk image" accept=".st,.msa,.prg,application/octet-stream" />
+            <label id="toolbarDiskOpen" class="fileBtn diskOpenBtn" title="Open a floppy disk image (.st, .stx, .msa) or a program (.prg) in drive A:.">
+              <input type="file" id="disk1" aria-label="Open floppy disk image" accept=".st,.stx,.msa,.prg,application/octet-stream" />
               <span><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i></span>
             </label>
             <button id="btnSaveFloppy" class="primaryIconBtn" disabled title="Save floppy A: with the changes the program made, as a .st file." aria-label="Save floppy A:.">
@@ -258,10 +258,10 @@
           <div class="disklib-mounted-list"></div>
         </div>
         <div class="disklib-toolbar">
-          <button class="disklib-btn disklib-upload-btn" title="Upload ST, MSA or PRG files" aria-label="Upload ST, MSA or PRG files">
+          <button class="disklib-btn disklib-upload-btn" title="Upload ST, STX, MSA or PRG files" aria-label="Upload ST, STX, MSA or PRG files">
             <i class="fa-solid fa-upload" aria-hidden="true"></i>
           </button>
-          <input type="file" class="disklib-upload-input" accept=".st,.msa,.prg,application/octet-stream" multiple hidden />
+          <input type="file" class="disklib-upload-input" accept=".st,.stx,.msa,.prg,application/octet-stream" multiple hidden />
           <button class="disklib-btn disklib-new-folder-btn" title="Create a folder" aria-label="Create a folder">
             <i class="fa-solid fa-folder-plus" aria-hidden="true"></i>
           </button>
@@ -358,7 +358,7 @@
             </div>
             <div class="disklib-list"></div>
           </div>
-          <div class="disklib-drop-hint"><i class="fa-solid fa-upload"></i> Drop ST, MSA or PRG files here</div>
+          <div class="disklib-drop-hint"><i class="fa-solid fa-upload"></i> Drop ST, STX, MSA or PRG files here</div>
         </div>
         <div class="disklib-searchbar">
           <i class="fa-solid fa-magnifying-glass"></i>
@@ -366,6 +366,7 @@
           <select class="disklib-filter-type" aria-label="Filter by type" title="Filter by type">
             <option value="all">All types</option>
             <option value="st">ST</option>
+            <option value="stx">STX</option>
             <option value="prg">PRG</option>
           </select>
           <select class="disklib-filter-status" aria-label="Filter by status" title="Filter by status">

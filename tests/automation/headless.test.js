@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const path = require("node:path");
 const { createHeadlessAutomation } = require(path.join(__dirname, "..", "..", "automation", "headless.js"));
 const { makeBlankST } = require("../core/stimage.js");
+const { stFromToStx } = require("../core/stximage.js");
 
 const tests = [];
 function test(name, fn) { tests.push({ name: name, fn: fn }); }
@@ -90,6 +91,34 @@ test("input: the guest creates a folder on the floppy and the change comes back"
   api.media.flushFloppy({ drive: "A" });
   const names = api.media.listFiles({ drive: "A" }).entries.map(function (e) { return e.name; }).sort();
   assert.deepEqual(names, ["HELLO.TXT", "X"]);
+});
+
+test("a Pasti .stx floppy is read-only: the original image comes back even after the guest writes", async function () {
+  const api = await desktop();
+  const stx = stFromToStx(makeBlankST("PASTI", [{ name: "HELLO.TXT", data: "x" }]));
+  const m = api.media.mountFloppy({ drive: "A", base64: stx.toString("base64"), name: "game.stx" });
+  assert.equal(m.floppy.name, "game.stx");
+  assert.equal(m.floppy.readOnly, true);
+  assert.ok(api.system.getCapabilities().formats.includes("stx"));
+  api.system.run({ frames: 20 });
+  api.input.moveMouse({ dx: -300, dy: -170 });
+  api.input.moveMouse({ dx: 15, dy: 6 });
+  api.input.click({ double: true });
+  api.system.run({ frames: 200 });
+  api.input.key({ key: "ControlLeft", action: "press" });
+  api.system.run({ frames: 3 });
+  api.input.key({ key: "KeyN" });
+  api.input.key({ key: "ControlLeft", action: "release" });
+  api.system.run({ frames: 60 });
+  api.input.typeText({ text: "x\n" });
+  api.system.run({ frames: 1200 });
+  assert.equal(api.system.getState().floppies.A.modified, false, "a .stx never reports unsaved changes");
+  api.media.flushFloppy({ drive: "A" });
+  const back = api.media.readFloppy({ drive: "A" });
+  assert.equal(back.size, stx.length, "the image is not truncated");
+  assert.equal(back.sha256, require("node:crypto").createHash("sha256").update(stx).digest("hex"), "the original bytes come back");
+  assert.throws(function () { api.media.listFiles({ drive: "A" }); }, /Pasti/);
+  assert.throws(function () { api.media.mountFloppy({ drive: "B", bytes: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], name: "bad.stx" }); }, /Pasti/);
 });
 
 // Opens the A: window twice (double click on the icon, twice) and returns a hash of its region.

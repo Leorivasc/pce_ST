@@ -16,7 +16,7 @@
 
   const MANIFEST_FILE = "library.json";
   const BLOB_DIR = "blobs/";
-  const BLOB_TYPES = ["st", "prg"];
+  const BLOB_TYPES = ["st", "prg", "stx"];
   const MAX_ATTEMPTS = 5;
   const GC_MIN_AGE_MS = 7 * 24 * 60 * 60 * 1000;
   const BATCH_BYTES = 48 * 1024 * 1024;

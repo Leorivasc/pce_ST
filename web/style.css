@@ -1089,7 +1089,7 @@ body.layout-column-resizing {
 
 .disk-activity-pulse-0,
 .disk-activity-pulse-1 {
-  animation: disk-activity-blink 180ms steps(1, end) 4;
+  animation: disk-activity-blink 180ms steps(1, end) infinite;   /* until the last event is 900 ms old */
 }
 
 @keyframes disk-activity-blink {
@@ -2900,7 +2900,7 @@ canvas.crtEnabled {
   vertical-align: middle;
 }
 .disklib-mounted-activity.active {
-  animation: disk-activity-blink 180ms steps(1, end) 4;
+  animation: disk-activity-blink 180ms steps(1, end) infinite;   /* until the last event is 900 ms old */
 }
 .disklib-mounted-activity.disklib-activity-read.active {
   background-position: -18px center;

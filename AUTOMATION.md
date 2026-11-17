@@ -50,7 +50,7 @@ links included); the MCP server turns it on by default.
 | | `getState` | `{ booted, config, rom, clock, seconds, frame, video, hash, registers, floppies {A,B}, joystick, keysDown }` |
 | | `getCapabilities` | versions, formats and the action list |
 | | `getLog` | the core's recent messages |
-| media | `mountFloppy` | `{ drive: "A"\|"B", path\|base64\|bytes, name }`. `.st` as is, `.msa` converted, `.prg` wrapped in a generated floppy. |
+| media | `mountFloppy` | `{ drive: "A"\|"B", path\|base64\|bytes, name }`. `.st` as is, `.stx` (Pasti) as is but read-only (`readOnly: true`; `readFloppy` returns the original bytes and `listFiles`/`readFile` fail with `unsupported_format`), `.msa` converted, `.prg` wrapped in a generated floppy. |
 | | `buildFloppy` | `{ files: [{name, path\|base64}], label, drive }` builds a 720K floppy (the "work files" disk; names like `SUB/FILE.TXT` make folders); mounts it if `drive` is given, else returns it. |
 | | `ejectFloppy`, `flushFloppy` | `{ drive }` |
 | | `readFloppy` | `{ drive, out }` → image bytes (or written to `out`) with `sha256`; includes the guest's changes. |

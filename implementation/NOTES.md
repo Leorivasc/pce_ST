@@ -34,8 +34,8 @@ Node, Python 3, make.
 
 ```bash
 scripts/build-core.sh                              # ~30 s -> build/out/
-node tests/core/core.test.js                       # 16 tests, ~35 s
-node tests/browser/browser.test.js                 # 38 tests in real Chrome, ~5 min
+node tests/core/core.test.js                       # 19 tests, ~35 s
+node tests/browser/browser.test.js                 # 39 tests in real Chrome, ~5 min
 node scripts/serve.js [port]                       # the page at http://127.0.0.1:8080/
 node tests/core/core.test.js --only=floppy         # a single test
 node tests/core/core.test.js /other/rom.img        # with another ROM
@@ -351,6 +351,14 @@ those events. `pce_st_disk_activity` (interface version 4) samples the WD1772 ev
 events from the run loop and from `stepFrames`. Browser test: the guest-write test checks for
 `0read` and `0write` events.
 
+**Correction (2026-11-16): the panel's LEDs never lit.** `ui.js` handed the library panel an `app`
+object without `onDiskActivity`, so the panel never received the events (the browser test only
+checked them on the proxy). It is wired now. A second fault hid behind it: every event called the
+panel's full `render()` (events arrive on every tick while a game loads), which rebuilt the LED and
+restarted its blink animation, so it would have stayed on the first (dim) frame. Now an event updates
+only that LED in place and the blink repeats until 900 ms after the last event. Browser test: "the drive
+LED stays lit while the floppy is being read" (fails without the wiring and without the in-place update).
+
 ## Finding 30: chained ROM switches are not serialized (2026-11-16, open, low priority)
 
 Found while investigating one intermittent failure of the browser test "a loaded ROM is kept in
@@ -374,6 +382,27 @@ when rerun alone and in 5 further full runs of the suite, so 1 failure in 7 runs
 - **If it is fixed:** queue the ROM switches so they run one at a time in the order asked, and
   write the regression test first (several switches without waiting; label, selector and
   `romLoaded` must match the last one asked; it must fail today).
+
+## Finding 31: Pasti (.stx) images (2026-11-16)
+
+- PCE already **loads** `.stx` (its PSI code); the core needed no change. The format is picked from
+  the extension, so the page mounts them as `/disks/fdN.stx`. A synthetic image (built from a `.st`
+  by `tests/core/stximage.js`) shows exactly the same A: window as the `.st`.
+- PCE **cannot save** `.stx`: `psi_save_stx` always fails. After a guest write, `pce_st_disk_flush`
+  returned 0 and the file was left **empty (0 bytes)**, which the library would have stored as a new
+  revision. So `.stx` is read-only: `PCE_STApp` and the automation keep the original bytes, never
+  flush or read the file back, and report `readOnly: true` and `modified: false`. Writes are not
+  blocked (a write-protected disk would also stop TOS noticing a disk change, finding 27): they live
+  in the machine's memory and are lost on eject. A test shows the empty file when the guard is
+  removed.
+- The library stores `.stx` as it is (format `stx`, no conversion), without revisions from the
+  machine; verification and the FAT12 file view are not available for it. Packages and remote sync
+  accept the type.
+- Tried with 12 real Pasti images (a games compilation, not in the repository; read from outside it):
+  all insert without error. Title or menu screens were seen for Afterburner, R-Type, Space Harrier,
+  Double Dragon and Black Lamp / Out Run; Gauntlet II sat on "LOADING"; **Super Hang-On stayed
+  black** after ~56 s. The other five were not looked at. PCE ignores the raw track image and most of
+  Pasti's timing, so protected disks can fail: investigate per disk.
 
 ## Next step (phase 2, after step 3)
 

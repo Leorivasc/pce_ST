@@ -37,7 +37,13 @@
 
   function isSupportedName(name) {
     const ext = getExtension(name);
-    return ext === "st" || ext === "prg";
+    return ext === "st" || ext === "prg" || ext === "stx";
+  }
+
+  // Formats whose bytes are mounted as they are: .st, and Pasti .stx (read-only: the page
+  // never saves a guest write back, so the machine returns the same bytes).
+  function keepsImage(format) {
+    return format === "st" || format === "stx";
   }
 
   function toUint8(data) {
@@ -179,8 +185,8 @@
           logicalName: logicalName(normalized),
           format: format,
           sourceBytes: bytes,
-          runtimeBytes: format === "st" ? cloneBytes(bytes) : null,
-          runtimeName: format === "st" ? normalized : null,
+          runtimeBytes: keepsImage(format) ? cloneBytes(bytes) : null,
+          runtimeName: keepsImage(format) ? normalized : null,
           folderId: folders.has(folderId) ? folderId : ROOT_FOLDER_ID,
           imageIndex: -1,
           slot: -1,
@@ -414,7 +420,7 @@
         const sourceBytes = cloneBytes(raw.sourceBytes || raw.bytes);
         const runtimeBytes = raw.runtimeBytes
           ? cloneBytes(raw.runtimeBytes)
-          : format === "st"
+          : keepsImage(format)
             ? cloneBytes(sourceBytes)
             : null;
         const revisions = Array.isArray(raw.revisions) ? raw.revisions.map(function (revision) {
@@ -821,7 +827,7 @@
       function addFile(name, data, folderId) {
         const normalized = normalizeName(name);
         if (!normalized || !isSupportedName(normalized)) {
-          return Promise.reject(new Error("Only ST and PRG files are supported"));
+          return Promise.reject(new Error("Only ST, STX and PRG files are supported"));
         }
         const targetFolder = String(folderId || ROOT_FOLDER_ID);
         if (findByLogicalName(normalized, targetFolder)) {
@@ -843,7 +849,7 @@
         const normalized = normalizeName(name);
         if (!entry) return Promise.reject(new Error("Disk library entry not found"));
         if (!normalized || !isSupportedName(normalized)) {
-          return Promise.reject(new Error("Only ST and PRG files are supported"));
+          return Promise.reject(new Error("Only ST, STX and PRG files are supported"));
         }
         const duplicate = findByLogicalName(normalized, entry.folderId || ROOT_FOLDER_ID);
         if (duplicate && duplicate.id !== entry.id) {
@@ -858,8 +864,8 @@
           entry.logicalName = logicalName(normalized);
           entry.format = format;
           entry.sourceBytes = bytes;
-          entry.runtimeBytes = format === "st" ? cloneBytes(bytes) : null;
-          entry.runtimeName = format === "st" ? normalized : null;
+          entry.runtimeBytes = keepsImage(format) ? cloneBytes(bytes) : null;
+          entry.runtimeName = keepsImage(format) ? normalized : null;
           entry.modified = Date.now();
           appendRevision(entry, bytes);
           entry.dirty = false;
@@ -927,7 +933,7 @@
         if (!target) return Promise.reject(new Error("Disk library revision not found"));
         return unmountFile(id).then(function () {
           const bytes = cloneBytes(target.bytes);
-          if (entry.format === "st") {
+          if (keepsImage(entry.format)) {
             entry.sourceBytes = cloneBytes(bytes);
             entry.runtimeBytes = cloneBytes(bytes);
             entry.runtimeName = entry.name;
@@ -1370,7 +1376,7 @@
         const targetName = normalizeName(config.name || entry.name);
         if (!getFolder(targetFolder)) return Promise.reject(new Error("Target folder not found"));
         if (!targetName || !isSupportedName(targetName)) {
-          return Promise.reject(new Error("Only ST and PRG files are supported"));
+          return Promise.reject(new Error("Only ST, STX and PRG files are supported"));
         }
         const duplicate = findByLogicalName(targetName, targetFolder);
         if (duplicate) return Promise.reject(new Error("A disk library entry with that name already exists"));
@@ -1624,7 +1630,7 @@
             if (nameChanged) {
               entry.name = newName;
               entry.logicalName = logicalName(newName);
-              if (entry.format === "st" && entry.runtimeName) entry.runtimeName = newName;
+              if (keepsImage(entry.format) && entry.runtimeName) entry.runtimeName = newName;
             }
             entry.metaModified = at;
             if (folderChanged) result.moved++;

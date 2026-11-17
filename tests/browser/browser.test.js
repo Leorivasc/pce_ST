@@ -16,6 +16,7 @@ const fs = require("fs");
 const { start } = require("../../scripts/serve.js");
 const { launch } = require("./cdp.js");
 const { makeBlankST, listRoot } = require("../core/stimage.js");
+const { stFromToStx } = require("../core/stximage.js");
 
 const OUT = path.join(__dirname, "..", "..", "build", "out");
 const tests = [];
@@ -675,6 +676,49 @@ test("the floppies mounted in A: and B: come back after a reload", async functio
   await again.waitFor("PCE_ST_LIBRARY.listRevisions(PCE_ST_LIBRARY.listFiles().filter(function(f){return f.name==='keep_me.st';})[0].id).length === 2", 5000, "second revision");
   await again.sleep(500);                      // let the library finish writing before the data is cleared
   await again.close();
+});
+
+test("a Pasti .stx floppy opens read-only: it is mounted as it is and no revision is created", async function () {
+  const page = await openPage();
+  const stx = stFromToStx(makeBlankST("PASTI", [{ name: "HELLO.TXT", data: "from a stx" }]));
+  await page.evaluate(pickFile("disk1", stx, "pasti_game.stx"));
+  await page.waitFor("PCE_ST_APP.hasMountedFloppy(0)", 5000, "the .stx is mounted through the toolbar");
+  assert.strictEqual(await page.evaluate("PCE_ST_APP.getFloppyInfo(0).name"), "pasti_game.stx", "the name keeps .stx (it is not converted to .st)");
+  assert.strictEqual(await page.evaluate("PCE_ST_APP.getFloppyInfo(0).readOnly"), true);
+  assert.strictEqual(await page.evaluate("PCE_ST_LIBRARY.listFiles().filter(function(f){return f.name==='pasti_game.stx'&&f.format==='stx'&&f.mountedSlot===0;}).length"), 1, "the library holds a .stx entry mounted in A:");
+  assert.ok(await page.evaluate("document.getElementById('btnSaveFloppy').title.indexOf('read-only')>=0"), "the save button says it is read-only");
+  const r = await page.evaluate("PCE_ST_APP.flushFloppy(0).then(function(f){return {n:f.bytes.length,name:f.name,sum:f.bytes.reduce(function(a,b){return (a*31+b)>>>0;},0)};})");
+  let sum = 0;
+  for (let i = 0; i < stx.length; i++) sum = (sum * 31 + stx[i]) >>> 0;
+  assert.strictEqual(r.n, stx.length, "the image is not truncated");
+  assert.strictEqual(r.name, "pasti_game.stx");
+  assert.strictEqual(r.sum, sum, "the original bytes come back");
+  await page.sleep(2500);                       // longer than the library's save delay
+  assert.strictEqual(await page.evaluate("PCE_ST_LIBRARY.listRevisions(PCE_ST_LIBRARY.listFiles().filter(function(f){return f.name==='pasti_game.stx';})[0].id).length"), 1, "no revision was created");
+  await page.close();
+});
+
+test("the drive LED stays lit while the floppy is being read (the panel is not rebuilt on every event)", async function () {
+  const page = await openPage();
+  await reachDesktop(page);
+  await page.evaluate("__click('btnLayoutWork')");
+  const stx = stFromToStx(makeBlankST("LEDTEST", [{ name: "HELLO.TXT", data: "x" }]));
+  await page.evaluate(pickFile("disk1", stx, "led_test.stx"));
+  await page.waitFor("PCE_ST_APP.hasMountedFloppy(0)", 5000, "the floppy is mounted");
+  await page.waitFor("document.querySelector('.disklib-mounted-activity[data-slot=\\'0\\']')", 5000, "the A: LED is in the panel");
+  // The machine is stepped by hand in small chunks (one event per chunk): opening A: reads the disk.
+  // After each activity event, the LED element must be the one marked at the first event and lit.
+  const r = await page.evaluate("(async function(){var A=PCE_ST_APP;await A.pause();var f=function(n){return A.stepFrames(n);};" +
+    "var led=function(){return document.querySelector('.disklib-mounted-activity[data-slot=\\'0\\']');};" +
+    "window.__led=[];window.__raw=0;window.__noled=0;A.onDiskActivity(function(){window.__raw++;var el=led();if(!el){window.__noled++;return;}if(!el.__marked){el.__marked=true;return;}window.__led.push(!!el.isConnected&&el.classList.contains('active'));});" +
+    "await f(20);for(var i=0;i<6;i++){A.mouse(-50,-28,0);await f(2);} A.mouse(15,6,0); await f(8);" +
+    "for(var k=0;k<2;k++){A.mouse(0,0,1);await f(2);A.mouse(0,0,0);await f(3);} for(var j=0;j<150;j++){await f(2);}" +
+    "return {raw:window.__raw,noLed:window.__noled,events:window.__led.length,lit:window.__led.filter(Boolean).length};})()");
+  assert.ok(r.events >= 3, "several activity events arrived: " + JSON.stringify(r));
+  assert.strictEqual(r.lit, r.events, "the same LED element stayed lit through every event: " + JSON.stringify(r));
+  await page.evaluate("PCE_ST_APP.start()");
+  await page.evaluate("PCE_ST_LIBRARY.listFiles().filter(function(f){return f.name==='led_test.stx';}).forEach(function(f){PCE_ST_LIBRARY.deleteFile(f.id);})");
+  await page.close();
 });
 
 test("a change the guest makes to a mounted floppy is saved in the library", async function () {

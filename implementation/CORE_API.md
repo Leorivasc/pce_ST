@@ -122,8 +122,20 @@ msg("disk.insert", "/disks/fd0.st");
 
 **Order matters**: if you write the file before ejecting and the guest had
 modified the previous floppy, PCE overwrites your new image with the old one
-(there is a test covering this). Image formats: `.st` (tested). `.msa`, `.dim`
-and PCE's stream formats are in the code but untested.
+(there is a test covering this). Image formats: `.st` (tested) and
+Pasti `.stx` (tested, read-only, see below). `.msa`, `.dim` and PCE's stream formats are in the
+code but untested.
+
+**The format comes from the file's extension**: PCE picks the loader by the name given to
+`disk.insert`, so a Pasti image must be written to a path ending in `.stx` (the page uses
+`/disks/fdN.stx`). PCE reads `.stx` (through its PSI code: sector headers, bad CRC flags, "record
+not found" sectors, fuzzy bytes) but **cannot save it**: its STX writer always fails, and saving
+(`pce_st_disk_flush`, an eject or a reset after the guest wrote) leaves the file **empty** while
+`pce_st_disk_flush` still returns 0. So a `.stx` is read-only on the JS side: keep the original
+bytes, never read the file back, never call `pce_st_disk_flush` for it. The guest can still write
+(the write lives in the machine's memory and is lost on eject); `pce_st_disk_modified` then
+reports 1 and must be ignored. PCE does not use the raw track image or most of Pasti's timing, so
+protections that depend on them may not work.
 
 | Function | Description |
 |---|---|
