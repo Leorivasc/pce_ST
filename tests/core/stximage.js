@@ -14,6 +14,28 @@ function crc16(bytes) {
   return crc;
 }
 
+// A standard track image of 9 sectors (what a Read Track returns): gaps, address and data
+// marks with their sync bytes, IDs and CRCs. dataOf(sector) gives the 512 bytes of each.
+function trackImage(track, side, dataOf) {
+  const out = [];
+  const rep = function (v, n) { for (let i = 0; i < n; i++) out.push(v); };
+  rep(0x4e, 60);
+  for (let s = 1; s <= 9; s++) {
+    const id = [track, side, s, 2];
+    rep(0, 12); out.push(0xa1, 0xa1, 0xa1, 0xfe); id.forEach(function (b) { out.push(b); });
+    const idCrc = crc16([0xa1, 0xa1, 0xa1, 0xfe].concat(id)); out.push(idCrc >> 8, idCrc & 255);
+    rep(0x4e, 22); rep(0, 12); out.push(0xa1, 0xa1, 0xa1, 0xfb);
+    const data = Array.from(dataOf(s));
+    data.forEach(function (b) { out.push(b); });
+    const crc = crc16([0xa1, 0xa1, 0xa1, 0xfb].concat(data)); out.push(crc >> 8, crc & 255);
+    rep(0x4e, 40);
+  }
+  while (out.length < 6250) out.push(0x4e);
+  return Buffer.from(out);
+}
+
+// options.images: [{track, side, image}] adds a raw track image to those tracks (the
+// image may differ from the sector table, as it does on protected disks).
 // options.badCrc: [{track, side, sector}] sectors flagged with a data CRC error.
 // options.noData: [{track, side, sector}] sectors flagged "record not found".
 function stFromToStx(st, options) {
@@ -50,12 +72,20 @@ function stFromToStx(st, options) {
         data.push(st.subarray(lba * SIZE, (lba + 1) * SIZE));
         dofs += SIZE;
       }
-      const body = Buffer.concat([descriptors].concat(data));
+      const img = (opts.images || []).find(function (e) { return e.track === t && e.side === h; });
+      let lead = Buffer.alloc(0);
+      if (img) {
+        lead = Buffer.alloc(2 + img.image.length);
+        lead.writeUInt16LE(img.image.length, 0);
+        img.image.copy(lead, 2);
+        for (let s = 0; s < SECTORS; s++) descriptors.writeUInt32LE(descriptors.readUInt32LE(s * 16) + lead.length, s * 16 + 0);
+      }
+      const body = Buffer.concat([descriptors, lead].concat(data));
       const track = Buffer.alloc(16);
       track.writeUInt32LE(16 + body.length, 0);    // size of the whole record
       track.writeUInt32LE(0, 4);                   // fuzzy mask bytes
       track.writeUInt16LE(SECTORS, 8);
-      track.writeUInt16LE(1, 10);                  // flag: sector descriptors present
+      track.writeUInt16LE(img ? 0x41 : 1, 10);     // flags: sector descriptors present (+ track image)
       track.writeUInt16LE(6250, 12);               // track length in bytes
       track[14] = t | (h << 7);
       records.push(track, body);
@@ -64,4 +94,4 @@ function stFromToStx(st, options) {
   return Buffer.concat(records);
 }
 
-module.exports = { stFromToStx: stFromToStx };
+module.exports = { stFromToStx: stFromToStx, trackImage: trackImage };

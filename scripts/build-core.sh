@@ -72,7 +72,7 @@ EXPORTS="$EXPORTS,_malloc,_free"
 
 # shellcheck disable=SC2086
 emcc $CFLAGS $OBJS "$BUILD_DIR/st_glue.o" -lm -o "$OUT_DIR/pce_st_core.js" \
-  --no-entry -Wl,--wrap=time -Wl,--wrap=localtime \
+  --no-entry -Wl,--wrap=time -Wl,--wrap=localtime -Wl,--wrap=wd179x_set_cmd \
   -sMODULARIZE=1 -sEXPORT_NAME=PCE_STCoreFactory \
   -sENVIRONMENT=web,worker,node \
   -sALLOW_MEMORY_GROWTH=1 -sFORCE_FILESYSTEM=1 \

@@ -142,6 +142,8 @@ protections that depend on them may not work.
 | `int pce_st_msg(const char *msg, const char *val)` | Sends a PCE message. Returns 0 if accepted. Examples: `disk.eject`, `disk.insert`, `emu.pause`, `emu.reset`. `val` may be `NULL`. See `src/arch/atarist/msg.c`. |
 | `unsigned pce_st_disk_activity(void)` | Floppy activity since the last call (then cleared): bit 0 = A: read, 1 = A: write, 2 = B: read, 3 = B: write. Sampled every 16 cycles while the controller runs a command on a drive that holds a disk. `PCE_STApp` turns it into `onDiskActivity` events for the drive LEDs of the library panel. |
 | `int pce_st_disk_flush(unsigned drive)` | Saves floppy A: (0) or B: (1) to its file **now**, without ejecting it. 0 = saved or no changes; 1 = no disk or failed; 2 = the floppy controller is busy with a command (flushing then would break the transfer: run some emulated time and retry). PCE only saves by itself on eject or reset. |
+| `int pce_st_stx_raw_attach(unsigned drive, const char *path)` | Attaches the *raw view* (a PRI file in the module's file system) of the Pasti floppy now in the drive. While a Read Track runs, the controller reads this view; for every other command it reads the floppy's normal tracks. 0 = ok, 1 = no floppy in the drive, 2 = the file did not load. The attachment is tied to the floppy: another floppy in the drive ignores it. See finding 32. |
+| `void pce_st_stx_raw_clear(unsigned drive)` | Releases the raw view of a drive (call it when the floppy is ejected). |
 | `int pce_st_disk_modified(unsigned drive)` | 1 if the guest has written since the last save. |
 | `void pce_st_disk_hold_empty(unsigned drive)` | Call right after `disk.eject`: the empty drive keeps reporting "write protected". See "Swapping floppies" below. |
 
@@ -165,6 +167,7 @@ frames). After `pce_st_disk_flush`, read the file with `M.FS.readFile`.
 | Function | Description |
 |---|---|
 | `unsigned pce_st_peek8(unsigned long addr)` | Reads a byte from the bus (24 bits). |
+| `unsigned pce_st_peek16(unsigned long addr)` / `void pce_st_poke16(unsigned long addr, unsigned val)` | 16-bit bus accesses. The floppy controller and DMA registers (`0xFF8604`, `0xFF8606`) only answer to these; the core tests use them to run FDC commands without a guest program. |
 | `void pce_st_poke8(unsigned long addr, unsigned val)` | Writes a byte to the bus. Useful, for example, to program the PSG: `poke8(0xFF8800, reg); poke8(0xFF8802, value)`. |
 | `double pce_st_reg(const char *name)` | CPU register by name (`"pc"`, `"sr"`, `"d0"`..`"d7"`, `"a0"`..`"a7"`, `"sp"`, `"usp"`...). −1 if it does not exist. |
 | `unsigned long pce_st_ram_size(void)` | RAM size in bytes. |

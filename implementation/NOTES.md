@@ -34,8 +34,8 @@ Node, Python 3, make.
 
 ```bash
 scripts/build-core.sh                              # ~30 s -> build/out/
-node tests/core/core.test.js                       # 19 tests, ~35 s
-node tests/browser/browser.test.js                 # 39 tests in real Chrome, ~5 min
+node tests/core/core.test.js                       # 22 tests, ~35 s
+node tests/browser/browser.test.js                 # 41 tests in real Chrome, ~5 min
 node scripts/serve.js [port]                       # the page at http://127.0.0.1:8080/
 node tests/core/core.test.js --only=floppy         # a single test
 node tests/core/core.test.js /other/rom.img        # with another ROM
@@ -385,9 +385,10 @@ when rerun alone and in 5 further full runs of the suite, so 1 failure in 7 runs
 
 ## Finding 31: Pasti (.stx) images (2026-11-16)
 
-- PCE already **loads** `.stx` (its PSI code); the core needed no change. The format is picked from
-  the extension, so the page mounts them as `/disks/fdN.stx`. A synthetic image (built from a `.st`
-  by `tests/core/stximage.js`) shows exactly the same A: window as the `.st`.
+- PCE already **loads** `.stx` (its PSI code) from the extension, and a synthetic image (built from
+  a `.st` by `tests/core/stximage.js`) shows exactly the same A: window as the `.st`. But its loader
+  keeps only the sectors (see finding 32), so the page no longer mounts `.stx` directly: it converts
+  it to PRI and mounts `/disks/fdN.pri`.
 - PCE **cannot save** `.stx`: `psi_save_stx` always fails. After a guest write, `pce_st_disk_flush`
   returned 0 and the file was left **empty (0 bytes)**, which the library would have stored as a new
   revision. So `.stx` is read-only: `PCE_STApp` and the automation keep the original bytes, never
@@ -403,6 +404,56 @@ when rerun alone and in 5 further full runs of the suite, so 1 failure in 7 runs
   Double Dragon and Black Lamp / Out Run; Gauntlet II sat on "LOADING"; **Super Hang-On stayed
   black** after ~56 s. The other five were not looked at. PCE ignores the raw track image and most of
   Pasti's timing, so protected disks can fail: investigate per disk.
+
+## Finding 32: Pasti protections need the raw track image (2026-11-17)
+
+- **Cause.** A Pasti track holds a sector table (what Read Sector and Read Address see) and,
+  on protected disks, a raw track image (what Read Track sees). PCE's loader (`psi-img-stx.c`)
+  keeps only the sectors and rebuilds a standard track. Afterburner (Power Pack) does Restore
+  twice and a Read Track on track 0, and then shows its own "INSERT DISK B" message: a failed
+  protection check, not a drive-count problem (`_nflops` is 2).
+- **How Hatari does it** (studied, not copied): a byte-level controller that answers each
+  command from the right source: sector table for Read Sector / Read Address, track image for
+  Read Track. PCE's WD1772 is bit-level (one stream per track), so there is nothing to answer
+  from.
+- **What the real files show.** On Afterburner the track image and the sector table
+  **disagree** (on track 0, 316 of the boot sector's 512 bytes differ; some IDs carry head
+  `0xF7` in the table and `0x00` in the image). Read Track dumps show an address mark as
+  `xx A1 A1 FE` (the first sync byte comes out as another value), so the image cannot be encoded
+  as one consistent bit stream. Using the image alone leaves the disk unbootable.
+- **Solution (two views, no change to PCE's sources).** `web/js/core/stx_convert.js` converts
+  one `.stx` into two PRI files: the *sector view* (the image's gaps with the table's IDs, CRCs
+  and data written over it; tracks without an image are built from the table) and the *raw view*
+  (the image untouched). The core (`core/st_glue.c`) mounts the first as the floppy and attaches
+  the second to the drive: it replaces the controller's track hook, and a link-time wrap of
+  `wd179x_set_cmd` (`-Wl,--wrap`, as for `time`) switches the view when a Read Track starts or
+  ends, dropping the controller's cached track with `wd179x_flush`. Floppies without a raw
+  view are not affected. `pce_st_stx_raw_attach` / `pce_st_stx_raw_clear`, API version 5.
+- **Result.** Afterburner no longer asks for disk B and loads its graphics. Then it showed
+  "ADDRESS ERROR" and an empty play area. **That is not a disk problem; it is the video frequency.**
+  The game reads the Shifter's sync mode (`$FF820A`, bit 1: 0 = 60 Hz, 1 = 50 Hz); with 60 Hz
+  (what the bundled EmuTOS **US** sets) it takes a branch that uses `A0 = $FFFF8055` (its hardware
+  base pointer) as a data pointer: an odd address, hence the address error (68000 frame: access
+  `$FFFF8055`, instruction `MOVE.W (A0)+,A4` at `$4020`). The disc is a PAL (UK) edition. With
+  `$FF820A = 02` poked before starting, the game plays (score, enemies, stages). How it was found:
+  the address-error vector (`$000C`) led to the game's handler, whose stack frame gave the faulting
+  code; the check also showed every sector read lands in RAM exactly as the table says (885 of 885
+  through the controller, 0 mismatches in the final load), and that the failure is identical with
+  and without the raw view. **Confirmed on the real thing:** with TOS 1.02 UK (a PAL ROM, uploaded
+  with the ROM button) Afterburner loads and plays. Gauntlet II, which sat on "LOADING" before, also loads and plays
+  (same ROM, same conversion). Hatari's FDC trace agrees with PCE's for the first 353 sector reads
+  (same order, DMA addresses and counts).
+- **Not represented:** fuzzy bits, variable read timing per sector (revision 2 tables) and weak
+  bits. Conversion takes ~0.5 s per disk (~4 MB for both views) and is cached per mounted disk.
+- **Tests.** `tests/library/stx_convert.test.js` (structure of the converted tracks, read back
+  with an independent MFM decoder; flags; the missing third sync byte; invalid input) and, in
+  `core.test.js`, three tests that drive the controller directly: Read Sector sees the table,
+  Read Track sees the image (and back), no raw view means no difference, the raw view does not
+  outlive the floppy. Checked by breaking the view switch and `pce_st_stx_raw_clear` on purpose.
+- **Not verified:** the other real discs beyond Afterburner and Space Harrier (same result as before for
+  the latter); snapshots with an STX floppy mounted (the raw view is not part of the saved state);
+  the page in a real browser with the worker loading `stx_convert.js` is covered by the browser
+  suite only through the existing `.stx` tests.
 
 ## Next step (phase 2, after step 3)
 

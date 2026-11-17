@@ -16,6 +16,7 @@ importScripts(
   "../build/out/pce_st_core.js",
   "../core/st_config.js",
   "js/core/keymap.js",
+  "js/core/stx_convert.js",
   "js/render/gl.js",
   "js/render/software.js",
   "js/core/st_app.js"

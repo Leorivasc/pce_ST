@@ -26,8 +26,11 @@
 #include <arch/atarist/psg.h>
 #include <arch/atarist/video.h>
 
+#include <chipset/wd179x.h>
 #include <cpu/e68000/e68000.h>
 #include <devices/memory.h>
+#include <drivers/pri/pri.h>
+#include <drivers/pri/pri-img.h>
 #include <drivers/sound/sound.h>
 #include <drivers/video/terminal.h>
 #include <lib/log.h>
@@ -41,6 +44,8 @@
 int         par_verbose = 0;
 const char  *par_terminal = NULL;
 atari_st_t  *par_sim = NULL;
+
+static int glue_read_track (void *ext, unsigned d, unsigned c, unsigned h, pri_trk_t **trk);
 monitor_t   par_mon;
 ini_sct_t   *par_cfg = NULL;
 
@@ -208,6 +213,8 @@ int pce_st_init (const char *cfg)
 	if (st_psg_get_driver (&par_sim->psg) != NULL) {
 		st_psg_get_driver (&par_sim->psg)->write = audio_write;
 	}
+
+	wd179x_set_read_track_fct (&par_sim->fdc.wd179x, &par_sim->fdc, glue_read_track);
 
 	st_reset (par_sim);
 
@@ -440,6 +447,117 @@ int pce_st_msg (const char *msg, const char *val)
 
 
 /*
+ * Pasti (.stx) floppies have two views of a track: the sector table (what Read Sector
+ * and Read Address see) and the raw track image (what Read Track sees). A bit-level
+ * controller has one stream per track, so JS converts the image into two PRI files:
+ * the normal one, which PCE mounts, and a "raw" one attached here. The controller asks
+ * for a track through a hook; it returns the raw track while a Read Track command is the
+ * one in progress and the normal track otherwise. Disks without a raw view are not affected.
+ */
+static pri_img_t *glue_raw_img[2] = { NULL, NULL };
+static unsigned glue_raw_diskid[2] = { 0xffff, 0xffff };
+static int glue_raw_view = 0;
+
+static int glue_has_raw (unsigned d)
+{
+	return ((glue_raw_img[d] != NULL) && (glue_raw_diskid[d] == par_sim->fdc.diskid[d]));
+}
+
+static int glue_read_track (void *ext, unsigned d, unsigned c, unsigned h, pri_trk_t **trk)
+{
+	st_fdc_t  *fdc = ext;
+	pri_img_t *img;
+
+	d &= 1;
+	img = fdc->img[d];
+
+	if (glue_raw_view && glue_has_raw (d)) {
+		img = glue_raw_img[d];
+	}
+
+	if (img == NULL) {
+		return (1);
+	}
+
+	if ((*trk = pri_img_get_track (img, c, h, 1)) == NULL) {
+		return (1);
+	}
+
+	return (0);
+}
+
+/* Linked with -Wl,--wrap=wd179x_set_cmd: the DMA chip's command writes arrive here first. */
+void __real_wd179x_set_cmd (wd179x_t *fdc, unsigned char val);
+
+void __wrap_wd179x_set_cmd (wd179x_t *fdc, unsigned char val)
+{
+	unsigned op = val & 0xf0;
+	int      raw;
+	unsigned d;
+
+	/* A command is ignored while the controller is busy (only Force Interrupt gets in). */
+	if ((op != 0xd0) && !(fdc->status & 0x01) && (glue_raw_img[0] || glue_raw_img[1])) {
+		if (op == 0xe0) {
+			raw = 1;
+		}
+		else if (op >= 0x80) {
+			raw = 0;
+		}
+		else {
+			raw = glue_raw_view;
+		}
+
+		if (raw != glue_raw_view) {
+			glue_raw_view = raw;
+
+			/* Drop the loaded track so the command asks the hook for the other view. */
+			for (d = 0; d < 2; d++) {
+				if (glue_has_raw (d)) {
+					wd179x_flush (fdc, d);
+				}
+			}
+		}
+	}
+
+	__real_wd179x_set_cmd (fdc, val);
+}
+
+/* Attaches the raw view (a PRI file) of the floppy now in the drive. 0 = ok. */
+EMSCRIPTEN_KEEPALIVE
+int pce_st_stx_raw_attach (unsigned drive, const char *path)
+{
+	pri_img_t *img;
+
+	if ((drive > 1) || (par_sim->fdc.diskid[drive] >= 0xffff)) {
+		return (1);
+	}
+
+	if ((img = pri_img_load (path, PRI_FORMAT_PRI)) == NULL) {
+		return (2);
+	}
+
+	if (glue_raw_img[drive] != NULL) {
+		pri_img_del (glue_raw_img[drive]);
+	}
+
+	glue_raw_img[drive] = img;
+	glue_raw_diskid[drive] = par_sim->fdc.diskid[drive];
+
+	return (0);
+}
+
+EMSCRIPTEN_KEEPALIVE
+void pce_st_stx_raw_clear (unsigned drive)
+{
+	if ((drive < 2) && (glue_raw_img[drive] != NULL)) {
+		pri_img_del (glue_raw_img[drive]);
+		glue_raw_img[drive] = NULL;
+		glue_raw_diskid[drive] = 0xffff;
+	}
+}
+
+
+/*
  * Floppy disks. PCE keeps the decoded image in memory and only saves it to the
  * file on eject or reset. pce_st_disk_flush saves it now, without ejecting, so
  * that JS can read the updated file. drive: 0 (A:) or 1 (B:).
@@ -484,12 +602,12 @@ int pce_st_disk_flush (unsigned drive)
  * module loads: a stale .wasm (cached by a browser or a server) next to newer JavaScript
  * would otherwise fail in confusing ways (for example a drive left empty halfway through
  * a swap). Raise it whenever a function JS depends on is added or changes meaning.
- * 1 = original, 2 = pce_st_disk_hold_empty, 3 = pce_st_disk_flush returns 2 while busy, 4 = pce_st_disk_activity.
+ * 1 = original, 2 = pce_st_disk_hold_empty, 3 = pce_st_disk_flush returns 2 while busy, 4 = pce_st_disk_activity, 5 = pce_st_stx_raw_attach / pce_st_stx_raw_clear, pce_st_peek16 / pce_st_poke16.
  */
 EMSCRIPTEN_KEEPALIVE
 unsigned pce_st_api_version (void)
 {
-	return (4);
+	return (5);
 }
 
 /*
@@ -527,6 +645,19 @@ EMSCRIPTEN_KEEPALIVE
 void pce_st_poke8 (unsigned long addr, unsigned val)
 {
 	mem_set_uint8 (par_sim->mem, addr & 0xffffff, val & 0xff);
+}
+
+/* 16-bit bus accesses: the floppy controller and DMA registers only answer to these. */
+EMSCRIPTEN_KEEPALIVE
+unsigned pce_st_peek16 (unsigned long addr)
+{
+	return (mem_get_uint16_be (par_sim->mem, addr & 0xffffff));
+}
+
+EMSCRIPTEN_KEEPALIVE
+void pce_st_poke16 (unsigned long addr, unsigned val)
+{
+	mem_set_uint16_be (par_sim->mem, addr & 0xffffff, val & 0xffff);
 }
 
 EMSCRIPTEN_KEEPALIVE

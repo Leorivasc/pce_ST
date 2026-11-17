@@ -13,7 +13,7 @@ const assert = require("assert");
 const path = require("path");
 const { createCore, writePng } = require("./harness.js");
 const { makeBlankST, listRoot } = require("./stimage.js");
-const { stFromToStx } = require("./stximage.js");
+const { stFromToStx, trackImage } = require("./stximage.js");
 
 const OUT = path.join(__dirname, "..", "..", "build", "out");
 const BOOT_FRAMES = 1600; // EmuTOS reaches the desktop around frame ~1300 (mono)
@@ -297,6 +297,88 @@ test("a guest write on a .stx floppy does not block mounting the next floppy", a
   assert.ok(core.readFloppy(0).equals(two), "the next floppy is mounted and holds exactly its own image");
 });
 
+// ---- driving the floppy controller directly (no program in the guest) ----
+
+const DMA_BUFFER = 0x20000;
+
+function fdcWait(core) {
+  core.M._pce_st_poke16(0xff8606, 0x0080);
+  for (let i = 0; i < 1500; i++) {
+    core.stepCycles(8000);
+    core.M._pce_st_poke16(0xff8606, 0x0080);
+    if ((core.M._pce_st_peek16(0xff8604) & 1) === 0) return;
+  }
+  throw new Error("the floppy controller stayed busy");
+}
+
+function fdcCommand(core, cmd) {
+  core.M._pce_st_poke16(0xff8606, 0x0080);
+  core.M._pce_st_poke16(0xff8604, cmd);
+  fdcWait(core);
+}
+
+// Runs a Read Sector (sectors = 1) or a Read Track (sectors = 13, about 6.5 KB) on drive A,
+// side 0, track 0 and returns what the DMA chip delivered to memory.
+function fdcRead(core, cmd, sectorNumber, sectors) {
+  const M = core.M;
+  M._pce_st_poke8(0xff8800, 14); M._pce_st_poke8(0xff8802, 0x05);   // drive A, side 0
+  fdcCommand(core, 0x03);                                          // Restore
+  M._pce_st_poke8(0xff860d, DMA_BUFFER & 255); M._pce_st_poke8(0xff860b, (DMA_BUFFER >> 8) & 255); M._pce_st_poke8(0xff8609, DMA_BUFFER >> 16);
+  M._pce_st_poke16(0xff8606, 0x0190); M._pce_st_poke16(0xff8606, 0x0090);   // read direction, empty FIFO
+  M._pce_st_poke16(0xff8604, sectors);                                      // sector count
+  M._pce_st_poke16(0xff8606, 0x0084); M._pce_st_poke16(0xff8604, sectorNumber);
+  fdcCommand(core, cmd);
+  const out = Buffer.alloc(sectors * 512);
+  for (let i = 0; i < out.length; i++) out[i] = M._pce_st_peek8(DMA_BUFFER + i);
+  return out;
+}
+
+// The 512 bytes after the first data mark of a Read Track. The controller reports the first
+// sync byte of a mark as another value, so the mark shows as "A1 A1 FB" (this is also how
+// the track images inside Pasti files look).
+function firstDataField(track) {
+  const at = track.indexOf(Buffer.from([0xa1, 0xa1, 0xfb]));
+  assert.ok(at >= 0, "the track holds a data mark");
+  return track.subarray(at + 3, at + 3 + 512);
+}
+
+// A Pasti image whose raw track image and sector table disagree on sector 1 of track 0, as
+// they do on protected disks: the table says 0x55, the track image says 0xAA.
+function disagreeingStx() {
+  const st = makeBlankST("TESTDISK", []);
+  st.fill(0x55, 0, 512);
+  const image = trackImage(0, 0, function (s) { return Buffer.alloc(512, s === 1 ? 0xaa : 0x55); });
+  return stFromToStx(st, { images: [{ track: 0, side: 0, image: image }] });
+}
+
+test("a .stx floppy: Read Sector sees the sector table and Read Track sees the raw track image", async function () {
+  const core = await bootDesktop();
+  assert.strictEqual(core.mountStx(0, disagreeingStx()), 0);
+
+  assert.ok(fdcRead(core, 0x80, 1, 1).equals(Buffer.alloc(512, 0x55)), "Read Sector returns the table's data");
+  assert.ok(firstDataField(fdcRead(core, 0xe0, 0, 13)).equals(Buffer.alloc(512, 0xaa)), "Read Track returns the track image's data");
+  assert.ok(fdcRead(core, 0x80, 1, 1).equals(Buffer.alloc(512, 0x55)), "Read Sector sees the table again after a Read Track");
+});
+
+test("a .stx floppy without the raw view returns the table's data to Read Track too", async function () {
+  const core = await bootDesktop();
+  assert.strictEqual(core.mountStx(0, disagreeingStx(), { raw: false }), 0);
+
+  assert.ok(firstDataField(fdcRead(core, 0xe0, 0, 13)).equals(Buffer.alloc(512, 0x55)), "without the raw view, the track is the sector view");
+});
+
+test("the raw view of a .stx floppy does not outlive the floppy", async function () {
+  const core = await bootDesktop();
+  assert.strictEqual(core.mountStx(0, disagreeingStx()), 0);
+  const plain = makeBlankST("PLAIN", []);
+  plain.fill(0x33, 0, 512);
+  core.msg("disk.eject", "0");
+  core.M._pce_st_stx_raw_clear(0);
+  assert.strictEqual(core.mountFloppy(0, plain), 0);
+
+  assert.ok(firstDataField(fdcRead(core, 0xe0, 0, 13)).equals(Buffer.alloc(512, 0x33)), "Read Track on a plain floppy reads that floppy");
+});
+
 test("snapshot: dumping WASM memory and restoring it in another instance continues identically", async function () {
   const a = await createCore();
   a.stepFrames(1400);
@@ -369,7 +451,7 @@ test("the joystick is driven by the numeric keypad while joystick mode is on", a
 
 test("the core reports its interface version (the page refuses a mismatched .wasm)", async function () {
   const core = await createCore();
-  assert.strictEqual(core.M._pce_st_api_version(), 4);
+  assert.strictEqual(core.M._pce_st_api_version(), 5);
 });
 
 test("PCE messages work (emu.pause is accepted, an unknown message is not)", async function () {

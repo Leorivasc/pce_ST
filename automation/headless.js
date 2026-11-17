@@ -25,6 +25,7 @@ const API_VERSION = "1";
 
 const PCE_STConfig = require(path.join(ROOT, "core", "st_config.js"));
 const PCE_STImage = require(path.join(ROOT, "web", "js", "core", "st_image.js"));
+const PCE_STStx = require(path.join(ROOT, "web", "js", "core", "stx_convert.js"));
 const PCE_STKeymap = require(path.join(ROOT, "web", "js", "core", "keymap.js"));
 const PCE_STSnapshot = require(path.join(ROOT, "web", "js", "core", "snapshot_codec.js"));
 
@@ -154,11 +155,11 @@ async function createHeadlessAutomation(options) {
     });
   }
 
-  // Pasti (.stx) images are read-only: PCE loads them but its STX writer always fails and
-  // leaves an empty file. They are mounted under a .stx name (PCE picks the format from the
-  // extension), never saved back, and `readFloppy` returns the original bytes.
+  // Pasti (.stx) images are read-only: they are converted to PRI (see
+  // web/js/core/stx_convert.js; the sector view is the floppy, the raw view is attached to
+  // the drive for Read Track), never saved back, and `readFloppy` returns the original bytes.
   function isStx(f) { return !!f && /\.stx$/i.test(f.name || ""); }
-  function floppyFile(drive) { return "/disks/fd" + drive + (isStx(floppies[drive]) ? ".stx" : ".st"); }
+  function floppyFile(drive) { return "/disks/fd" + drive + (isStx(floppies[drive]) ? ".pri" : ".st"); }
 
   // TOS notices a disk change through the write-protect line, which must stay up for a while
   // with the drive empty (see pce_st_disk_hold_empty in st_glue.c): an eject records when
@@ -168,6 +169,7 @@ async function createHeadlessAutomation(options) {
 
   function ejectFromCore(drive) {
     coreMsg("disk.eject", String(drive));
+    M._pce_st_stx_raw_clear(drive);
     M._pce_st_disk_hold_empty(drive);
     emptySince[drive] = M._pce_st_clock_count();
   }
@@ -182,8 +184,20 @@ async function createHeadlessAutomation(options) {
       if (waited < gap) advance(gap - waited);
     }
     emptySince[drive] = -1;
-    M.FS.writeFile(floppyFile(drive), floppies[drive].bytes);
-    return coreMsg("disk.insert", floppyFile(drive));
+    const f = floppies[drive];
+    let conversion = null;
+    if (isStx(f)) {
+      if (!f.converted) f.converted = PCE_STStx.convert(f.bytes);   // cached: a reset mounts again
+      conversion = f.converted;
+    }
+    M.FS.writeFile(floppyFile(drive), conversion ? conversion.sectors : f.bytes);
+    const rc = coreMsg("disk.insert", floppyFile(drive));
+    if (rc === 0 && conversion && conversion.raw) {
+      const rawFile = "/disks/fd" + drive + ".raw.pri";
+      M.FS.writeFile(rawFile, conversion.raw);
+      return withStr(M, rawFile, function (p) { return M._pce_st_stx_raw_attach(drive, p); });
+    }
+    return rc;
   }
 
   function pullFloppy(drive) {
@@ -199,7 +213,7 @@ async function createHeadlessAutomation(options) {
   async function startMachine(cfg, snapshotMemory) {
     const factory = require(CORE_JS);
     M = await factory({ print: function () {}, printErr: function (t) { log.push(String(t)); if (log.length > 200) log.shift(); } });
-    if (typeof M._pce_st_api_version !== "function" || M._pce_st_api_version() !== 4) {
+    if (typeof M._pce_st_api_version !== "function" || M._pce_st_api_version() !== 5) {
       M = null;
       throw fail("build/out/pce_st_core.wasm is out of date: run scripts/build-core.sh", "core_mismatch");
     }

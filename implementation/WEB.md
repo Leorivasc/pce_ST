@@ -17,6 +17,7 @@ web/
     app/keyboard.js        on-screen Atari ST keyboard (PCE_STKeyboard)
     app/joystick.js        on-screen joystick logic (PCE_STJoystick)
     app/gamepad.js         physical gamepad polling (PCE_STGamepad)
+    (ui.js also maps the arrow keys + Left Ctrl to the joystick: "keyboard joystick", pref pce_st_key_joystick)
     app/snapshot_ui.js     snapshot panel (PCE_STSnapshotUI)
     app/disk_library_ui.js floppy library panel (PCE_STDiskLibraryUI)
     app/pce_st.js          entry point
@@ -27,6 +28,7 @@ web/
     core/rom_library.js    ROM library (IndexedDB, PCE_STRomLibrary)
     core/snapshot_codec.js snapshot file container (PCE_STSnapshot)
     core/st_image.js       FAT12 floppy builder and verifier (PCE_STImage)
+    core/stx_convert.js    Pasti .stx to PRI conversion, sector and raw views (PCE_STStx)
     render/gl.js           WebGL2 renderer with the CRT filter (PCE_STGlRenderer)
     render/software.js     Canvas 2D fallback renderer
     render/shaders/        vert.glsl, decode.frag.glsl, crt.frag.glsl
@@ -214,7 +216,7 @@ value played since the last report; 0 = exact silence). The proxy creates the
   (see `LIBRARY.md`). A *View the files* button opens a read-only FAT12 view
   (folders, preview, per-file download). `.msa` files are converted to `.st` when
   added. Pasti `.stx` images are stored as they are and mounted **read-only** (the app keeps the
-  original bytes, never saves them back and reports `readOnly: true` and never `modified`;
+  original bytes, mounts a conversion to PRI, never saves anything back and reports `readOnly: true` and never `modified`;
   the library creates no revisions for them and the file view is not available for them). Remote sync (WebDAV) is in the title bar; two buttons build a floppy from files or
   from a folder.
 - **Snapshots panel** (camera button): *Quick slot* save/restore (IndexedDB

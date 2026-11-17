@@ -503,6 +503,51 @@ test("the on-screen joystick: dragging the stick and the fire button reach the m
   await page.close();
 });
 
+test("the keyboard joystick: arrows and Left Ctrl drive port 1 and do not reach the ST keyboard", async function () {
+  const page = await openPage();
+  const port1 = function () { return page.evaluate("PCE_ST_APP.getJoystickState().then(function(s){return s.port1;})"); };
+  const press = async function (code, key, vk) { await page.key("rawKeyDown", code, key, vk); await page.sleep(120); };
+  const release = async function (code, key, vk) { await page.key("keyUp", code, key, vk); await page.sleep(120); };
+  await page.evaluate("__click('btnKeyboard'); document.getElementById('screen').focus(); true");
+  const lit = "document.querySelector('#stKeyboard [data-code=\"ArrowUp\"]').classList.contains('pressed')";
+
+  // Off by default: an arrow is a plain key (it lights its on-screen key) and the stick stays still.
+  assert.strictEqual(await page.evaluate("document.getElementById('btnKeyJoystick').getAttribute('aria-pressed')"), "false");
+  await press("ArrowUp", "ArrowUp", 38);
+  assert.strictEqual(await page.evaluate(lit), true, "off: the arrow is a keyboard key");
+  assert.strictEqual(await port1(), 0, "off: the stick does not move");
+  await release("ArrowUp", "ArrowUp", 38);
+
+  await page.evaluate("__click('btnKeyJoystick')");
+  assert.strictEqual(await page.evaluate("document.getElementById('btnKeyJoystick').getAttribute('aria-pressed')"), "true");
+  assert.strictEqual(await page.evaluate("PCE_ST_APP.getJoystickEnabled()"), true, "turning it on switches the machine's joystick mode on");
+  await page.evaluate("document.getElementById('screen').focus(); true");
+
+  await press("ArrowUp", "ArrowUp", 38);
+  assert.strictEqual(await port1(), 0x01, "up");
+  assert.strictEqual(await page.evaluate(lit), false, "on: the arrow does not reach the ST keyboard");
+  await press("ArrowLeft", "ArrowLeft", 37);
+  assert.strictEqual(await port1(), 0x05, "up + left");
+  await press("ControlLeft", "Control", 17);
+  assert.strictEqual(await port1(), 0x85, "up + left + fire (Left Ctrl)");
+  await release("ArrowUp", "ArrowUp", 38);
+  await release("ArrowLeft", "ArrowLeft", 37);
+  assert.strictEqual(await port1(), 0x80, "only fire");
+  await release("ControlLeft", "Control", 17);
+  assert.strictEqual(await port1(), 0, "all released");
+  await press("ArrowDown", "ArrowDown", 40); await press("ArrowRight", "ArrowRight", 39);
+  assert.strictEqual(await port1(), 0x0a, "down + right");
+  await release("ArrowDown", "ArrowDown", 40); await release("ArrowRight", "ArrowRight", 39);
+
+  assert.strictEqual(await page.evaluate("window.localStorage.getItem('pce_st_key_joystick')"), "1", "the choice is remembered");
+  await page.evaluate("__click('btnKeyJoystick')");
+  await press("ArrowUp", "ArrowUp", 38);
+  assert.strictEqual(await port1(), 0, "off again: the stick does not move");
+  assert.strictEqual(await page.evaluate(lit), true, "off again: the arrow is a keyboard key");
+  await release("ArrowUp", "ArrowUp", 38);
+  await page.close();
+});
+
 test("the joystick mode survives a machine restart", async function () {
   const page = await openPage();
   await page.evaluate("__click('btnJoystick')");

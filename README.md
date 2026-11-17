@@ -107,6 +107,7 @@ theme by default.
 | Chip with arrows | Turbo: run as fast as possible (audio is muted). |
 | Mouse | Captures the mouse (same as clicking the screen). |
 | Gamepad | Shows the on-screen joystick (port 1). |
+| Keyboard with arrows | **Keyboard joystick** (remembered): the arrow keys and **Left Ctrl** act as the stick and the fire button of port 1, and are not sent to the ST as keys. Turning it on switches the joystick mode on. |
 | Keyboard | Shows the on-screen Atari ST keyboard. |
 | Down arrow (right end) | Shows **Monitor** (mono 640×400 or color 320×200), **Memory** (512K to 4 MB) and **Theme**. Changing monitor or memory restarts the machine. |
 
@@ -122,7 +123,8 @@ theme by default.
 - **On-screen joystick** (the CX40 from jsA8E, port 1): drag the stick, press the red
   button to fire. While it is shown, the numeric keypad keys `8 2 4 6` (and
   `7 9 1 3` for diagonals) move the joystick and `0` fires, because PCE emulates
-  the joystick with the keypad.
+  the joystick with the keypad. With the **keyboard joystick** button on, the arrow keys
+  and Left Ctrl do the same (they work while the screen has focus).
 - **Keyboard**: active while the screen has focus or the mouse is captured.
   ST-specific keys: **Help = End**, **Undo = Page Down** (there is no Page Up).
   While the mouse is captured, `Esc` releases it and does not reach the
@@ -130,6 +132,9 @@ theme by default.
 - **Pasti `.stx` images** (copy-protected games) open like any other floppy, but are
   **read-only**: what the program writes is lost, nothing is saved back, and the file view
   of the library is not available for them. Some protections may still fail (see `NOTES.md`).
+  Games from PAL (European) editions may need a **50 Hz ROM**: the built-in EmuTOS is the US
+  one (60 Hz), and some games misbehave at 60 Hz (Afterburner crashes with an address error).
+  Load a UK TOS with the ROM button.
 - **Floppies**: whatever the program writes to A: stays in memory; use the
   download button to get the updated image. Mounting another image replaces the
   previous one **without downloading** anything that was modified: save first.
@@ -142,11 +147,11 @@ theme by default.
 ## Tests
 
 ```bash
-node tests/core/core.test.js        # core in Node: 19 tests, ~35 s
-for t in library_archive library_package disk_library st_image snapshot_codec gamepad remote_workspace remote_library remote_library_metadata remote_library_tombstones remote_library_prg_blobs stx_library; do node tests/library/$t.test.js; done   # library, seconds
+node tests/core/core.test.js        # core in Node: 22 tests, ~35 s
+for t in library_archive library_package disk_library st_image snapshot_codec gamepad remote_workspace remote_library remote_library_metadata remote_library_tombstones remote_library_prg_blobs stx_library stx_convert; do node tests/library/$t.test.js; done   # library, seconds
 node tests/automation/headless.test.js  # automation API: 13 tests, ~80 s
 node tests/automation/mcp.test.js       # MCP server over stdio, ~10 s
-node tests/browser/browser.test.js  # page in real Chrome: 39 tests, ~5 min
+node tests/browser/browser.test.js  # page in real Chrome: 41 tests, ~5 min
 ```
 
 - Both need `scripts/build-core.sh` to have been run first.

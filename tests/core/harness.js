@@ -79,6 +79,17 @@ async function createCore(options) {
       M.FS.writeFile(file, bytes);
       return core.msg("disk.insert", file);
     },
+    // A Pasti (.stx) floppy as the page mounts it: converted to PRI (the sector view is the
+    // floppy), and the raw view attached to the drive for Read Track. options.raw = false
+    // leaves the raw view out.
+    mountStx: function (drive, bytes, options) {
+      const conversion = require("../../web/js/core/stx_convert.js").convert(new Uint8Array(bytes));
+      const rc = core.mountFloppy(drive, Buffer.from(conversion.sectors), "pri");
+      if (rc !== 0 || !conversion.raw || (options && options.raw === false)) return rc;
+      const rawFile = "/disks/fd" + drive + ".raw.pri";
+      M.FS.writeFile(rawFile, conversion.raw);
+      return withStr(rawFile, function (p) { return M._pce_st_stx_raw_attach(drive, p); });
+    },
     readFloppy: function (drive) { return Buffer.from(M.FS.readFile("/disks/fd" + drive + ".st")); },
     diskFlush: function (drive) { return M._pce_st_disk_flush(drive); },
     diskModified: function (drive) { return M._pce_st_disk_modified(drive) !== 0; },

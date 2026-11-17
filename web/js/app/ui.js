@@ -19,8 +19,11 @@
   });
   const KEYS = Object.freeze({
     theme: "pce_st_ui_theme", crt: "pce_st_crt_enabled", monitor: "pce_st_monitor", ram: "pce_st_ram_kb",
+    keyJoystick: "pce_st_key_joystick",
   });
   const RAM_SIZES_KB = [512, 1024, 2048, 4096];
+  // Physical keys that drive the joystick when the keyboard joystick is on.
+  const KEY_JOYSTICK = Object.freeze({ ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", ControlLeft: "fire" });
 
   function readPref(key) {
     try { return window.localStorage ? window.localStorage.getItem(key) : null; } catch (e) { return null; }
@@ -97,6 +100,7 @@
     const mobileToolsClose = $("mobileToolsClose");
     const mobilePanelBackdrop = $("mobilePanelBackdrop");
     const btnJoystick = $("btnJoystick");
+    const btnKeyJoystick = $("btnKeyJoystick");
     const btnKeyboard = $("btnKeyboard");
     const joystickPanel = $("joystickPanel");
     const keyboardPanel = $("keyboardPanel");
@@ -548,6 +552,31 @@
       app.joystick(state);
     });
 
+    // Keyboard joystick: the arrow keys and Left Ctrl act as the stick and the fire button of
+    // port 1 and are not sent to the ST as keys. The choice is remembered. Turning it on
+    // switches the machine's joystick mode on (the keypad then stops typing digits).
+    let keyJoystick = readPref(KEYS.keyJoystick) === "1";
+    const keyPad = { up: false, down: false, left: false, right: false, fire: false };
+
+    function releaseKeyPad() {
+      const was = Object.keys(keyPad).some(function (k) { return keyPad[k]; });
+      Object.keys(keyPad).forEach(function (k) { keyPad[k] = false; });
+      if (was) app.joystick(Object.assign({}, keyPad));
+    }
+
+    function setKeyJoystick(enabled, remember) {
+      keyJoystick = !!enabled;
+      if (remember) writePref(KEYS.keyJoystick, keyJoystick ? "1" : "0");
+      btnKeyJoystick.classList.toggle("active", keyJoystick);
+      btnKeyJoystick.setAttribute("aria-pressed", String(keyJoystick));
+      btnKeyJoystick.title = keyJoystick ? "The arrow keys and Left Ctrl are the joystick (port 1). Click to use them as keys again." : "Use the arrow keys and Left Ctrl as the joystick (port 1).";
+      btnKeyJoystick.setAttribute("aria-label", btnKeyJoystick.title);
+      if (keyJoystick) app.setJoystickEnabled(true); else releaseKeyPad();
+    }
+
+    btnKeyJoystick.addEventListener("click", function () { setKeyJoystick(!keyJoystick, true); });
+    setKeyJoystick(keyJoystick, false);
+
     btnKeyboard.addEventListener("click", function () { setKeyboardEnabled(keyboardPanel.hidden); });
     btnJoystick.addEventListener("click", function () { setJoystickEnabled(joystickPanel.hidden); });
 
@@ -831,12 +860,23 @@
     function inputActive() { return pointerLocked() || document.activeElement === canvas; }
 
     document.addEventListener("keydown", function (e) {
+      if (keyJoystick && KEY_JOYSTICK[e.code] && inputActive()) {
+        e.preventDefault();
+        if (!e.repeat) { keyPad[KEY_JOYSTICK[e.code]] = true; app.joystick(Object.assign({}, keyPad)); }
+        return;
+      }
       if (!inputActive() || e.repeat || !window.PCE_STKeymap.pceKeyName(e.code)) return;
       e.preventDefault();
       keyboard.setPhysicalKey(e.code, true);
       app.onKeyDown(e.code);
     });
     document.addEventListener("keyup", function (e) {
+      if (keyJoystick && KEY_JOYSTICK[e.code]) {
+        if (inputActive()) e.preventDefault();
+        keyPad[KEY_JOYSTICK[e.code]] = false;
+        app.joystick(Object.assign({}, keyPad));
+        return;
+      }
       if (!window.PCE_STKeymap.pceKeyName(e.code)) return;
       if (inputActive()) e.preventDefault();
       keyboard.setPhysicalKey(e.code, false);
@@ -852,6 +892,7 @@
       app.releaseAllKeys();
       keyboard.releaseAll();
       joystick.reset();
+      releaseKeyPad();
       if (mouseButtons) {
         mouseButtons = 0;
         app.mouse(0, 0, 0);

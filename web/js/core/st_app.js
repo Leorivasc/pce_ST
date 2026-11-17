@@ -139,22 +139,34 @@
     // for a while with the drive empty (see pce_st_disk_hold_empty in st_glue.c). Every
     // eject records when the drive became empty; inserting waits (in emulated time) until the
     // drive has been empty for SWAP_GAP_CYCLES.
-    const CORE_API_VERSION = 4;           // see pce_st_api_version in st_glue.c
+    const CORE_API_VERSION = 5;           // see pce_st_api_version in st_glue.c
     const SWAP_GAP_CYCLES = 4000000;      // 0.5 s of emulated time
     const emptySince = [-1, -1];
 
     function ejectFromCore(drive) {
       coreMsg("disk.eject", String(drive));
+      M._pce_st_stx_raw_clear(drive);
       M._pce_st_disk_hold_empty(drive);
       emptySince[drive] = M._pce_st_clock_count();
     }
 
-    // Pasti (.stx) images are read-only: PCE can load them but not save them (its STX writer
-    // always fails and leaves an empty file). The page keeps the original bytes, mounts them
-    // under a .stx name (PCE picks the format from the extension) and never asks the core to
-    // save them. A guest write only lives in the machine's memory until the disk is ejected.
+    // Pasti (.stx) images are read-only: PCE's STX loader ignores the raw track images that
+    // protected disks need, and its writer always fails. The page keeps the original bytes
+    // and mounts a conversion to PRI (bit-level tracks, see js/core/stx_convert.js): the
+    // sector view as the floppy and the raw view attached to the drive, which the core uses
+    // for Read Track. Nothing is ever saved back: a guest write only lives in the machine's
+    // memory until the disk is ejected.
     function isStx(f) { return !!f && /\.stx$/i.test(f.name || ""); }
-    function floppyFile(drive) { return "/disks/fd" + drive + (isStx(floppies[drive]) ? ".stx" : ".st"); }
+    function floppyFile(drive) { return "/disks/fd" + drive + (isStx(floppies[drive]) ? ".pri" : ".st"); }
+    function stxConversion(f) {
+      if (!f.converted) f.converted = root.PCE_STStx.convert(f.bytes);   // cached: a reset mounts again
+      return f.converted;
+    }
+    function attachRawView(drive, raw) {
+      const file = "/disks/fd" + drive + ".raw.pri";
+      M.FS.writeFile(file, raw);
+      return withStr(M, file, function (p) { return M._pce_st_stx_raw_attach(drive, p); });
+    }
     function isModified(drive) { return !!(M && floppies[drive] && !isStx(floppies[drive]) && M._pce_st_disk_modified(drive)); }
 
     function mountIntoCore(drive, swap) {
@@ -175,8 +187,14 @@
         }
       }
       emptySince[drive] = -1;
-      M.FS.writeFile(file, f.bytes);
-      return coreMsg("disk.insert", file);
+      let conversion = null;
+      if (isStx(f)) {
+        try { conversion = stxConversion(f); } catch (e) { return 1; }
+      }
+      M.FS.writeFile(file, conversion ? conversion.sectors : f.bytes);
+      const rc = coreMsg("disk.insert", file);
+      if (rc === 0 && conversion && conversion.raw) return attachRawView(drive, conversion.raw);
+      return rc;
     }
 
     function coreMsg(name, value) {
