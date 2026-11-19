@@ -65,13 +65,11 @@ loads it itself. If emsdk is installed elsewhere: `EMSDK_DIR=/path/to/emsdk`.
 
 ### 3. PCE source code
 
-```bash
-git clone https://github.com/Leorivasc/pce ~/Documents/GIT/pce
-git -C ~/Documents/GIT/pce checkout b2e4b44
-```
-
-Tested commit: `b2e4b44`. If you keep it somewhere else: `PCE_SRC=/path/to/pce`.
-The script does **not modify** that clone: it builds a clean copy under `build/`.
+Nothing to do: PCE's source is in the repository, in `third_party/pce/` (a
+`git subtree` of the PCE.js fork <https://github.com/Leorivasc/pce>, commit
+`b2e4b44`). The build script copies it to `build/` and compiles the copy, so
+`third_party/pce/` is never modified by a build. To build against another PCE
+tree: `PCE_SRC=/path/to/pce scripts/build-core.sh`.
 
 ### 4. Build the core
 
@@ -181,7 +179,8 @@ node tests/browser/browser.test.js  # page in real Chrome: 41 tests, ~5 min
 |---|---|
 | `Missing build/out/pce_st_core.wasm` | The core has not been built: `scripts/build-core.sh`. |
 | `cannot find emcc or .../emsdk_env.sh` | emsdk is not in `~/emsdk`: install it (step 2) or set `EMSDK_DIR`. |
-| `WARNING: tested with b2e4b44` | The PCE clone is at another commit. It usually works, but the tested version is the one listed. |
+| `ERROR: ... is not a PCE source tree` | `PCE_SRC` points to a folder without PCE's `configure` and `src/arch/atarist/`. Unset it to use `third_party/pce/`. |
+| `configure` or `make` fail with `$'\r'` errors (Windows) | The checkout converted PCE's files to CRLF. `.gitattributes` prevents it; if the files were checked out before it existed, run `git rm -r --cached -q third_party/pce && git checkout -- third_party/pce`. |
 | The page shows `Aborted(CompileError ... expected magic word)` | The server returned a 404 instead of the `.wasm`: the core was not built or `build/out/` does not exist. |
 | `Failed to execute 'requestPointerLock'` or the mouse is not captured | You must click inside the screen; some browsers require the tab to have focus. |
 | No sound | The browser requires a user gesture: press **Start** (it does not start by itself). Check that the speed is 1×. |
@@ -215,6 +214,7 @@ tests/
   automation/        Headless automation API and MCP server tests
   browser/           Real-Chrome tests + minimal DevTools client
 roms/emutos/         EmuTOS 1.4 (GPL) with its license and source link
+third_party/pce/     PCE's source (git subtree of the PCE.js fork; patches in NOTES.md)
 implementation/      Notes, analysis and technical references
 requirements.md      Project requirements and feasibility assessment
 build/               Build output (not versioned)

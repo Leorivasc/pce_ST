@@ -28,9 +28,9 @@ repository is English. (Decision of 2026-11-15; see "Decisions made".)
 
 ## How to build and test the core
 
-Requirements: `emsdk` in `~/emsdk` (or `EMSDK_DIR`), a clone of
-<https://github.com/Leorivasc/pce> in `~/Documents/GIT/pce` (or `PCE_SRC`),
-Node, Python 3, make.
+Requirements: `emsdk` in `~/emsdk` (or `EMSDK_DIR`), Node, Python 3, make.
+PCE's source is in the repository (`third_party/pce/`, see "PCE inside the
+repository" below); `PCE_SRC` builds against another tree.
 
 ```bash
 scripts/build-core.sh                              # ~30 s -> build/out/
@@ -44,9 +44,10 @@ node tests/core/core.test.js /other/rom.img        # with another ROM
 - Output: `build/out/pce_st_core.js` (`MODULARIZE` module, factory
   `PCE_STCoreFactory`) and `pce_st_core.wasm` (~360 KB). The JS loads the `.wasm`
   by name. `build/` is in `.gitignore`.
-- The script builds a clean copy (`git archive`) and **does not touch the PCE
-  clone**. There are no patches on PCE: all of the project's own code is in
-  `core/`.
+- The script copies `third_party/pce/` (working tree, so uncommitted patches are
+  built) to `build/pce-src` and compiles the copy; it never writes into
+  `third_party/pce/`. Until 2026-11-19 the project's own code was all in `core/`
+  and PCE was not patched; patches are now allowed (see below).
 - Tested versions: Emscripten **7.0.0**, PCE `b2e4b44`, Node 18.19.1,
   Python 3.12, EmuTOS 1.4.
 - **Default ROM included**: `roms/emutos/etos192us.img` (EmuTOS 1.4, 192 KB, US,
@@ -460,6 +461,33 @@ when rerun alone and in 5 further full runs of the suite, so 1 failure in 7 runs
   the latter); snapshots with an STX floppy mounted (the raw view is not part of the saved state);
   the page in a real browser with the worker loading `stx_convert.js` is covered by the browser
   suite only through the existing `.stx` tests.
+
+## PCE inside the repository (2026-11-19)
+
+- **Decision (user):** PCE's source is vendored with `git subtree` in
+  `third_party/pce/` (PCE.js fork <https://github.com/Leorivasc/pce>, commit
+  `b2e4b44cae00`, squashed: one commit, no upstream history). PCE_ST builds from
+  its own repository alone, and PCE can be patched here.
+- **Check:** the core built from `third_party/pce/` is the same as the one built
+  from the external clone: `pce_st_core.js` is byte-identical and
+  `pce_st_core.wasm` differs only in 4 bytes, the compile time in PCE's version
+  string (`__DATE__`/`__TIME__`). All five suites pass.
+- **Line endings:** `.gitattributes` marks `third_party/pce/**` as `-text`, so a
+  Windows checkout (`core.autocrlf=true`) keeps LF and `configure`/`make` work.
+- **Updating PCE:** `git subtree pull --prefix=third_party/pce
+  https://github.com/Leorivasc/pce <full commit> --squash`, then rebuild and run
+  every suite. Fetching needs the full hash, not a short one.
+
+### Patches to PCE
+
+Rules: a patch is a generic fix (never for one program), goes in its own commit
+(only `third_party/pce/` and its test), comes with a test like any other change,
+and is listed here with the reason. Prefer the glue (`core/st_glue.c`) when a
+change can live there without tricks.
+
+| Date | Files | What and why | Test |
+|---|---|---|---|
+| (none yet) | | | |
 
 ## Next step (phase 2, after step 3)
 

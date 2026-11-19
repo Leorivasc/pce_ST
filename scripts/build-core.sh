@@ -1,23 +1,23 @@
 #!/bin/bash
-# Builds PCE's Atari ST core (Leorivasc/pce fork) as a WASM library.
+# Builds PCE's Atari ST core as a WASM library.
 #
 # Usage:  scripts/build-core.sh
 # Optional variables:
-#   PCE_SRC    PCE.js clone          (default ~/Documents/GIT/pce)
+#   PCE_SRC    PCE source tree       (default third_party/pce, the vendored copy)
 #   EMSDK_DIR  emsdk installation    (default ~/emsdk)
 #   JOBS       make jobs             (default nproc)
 #
 # Output: build/out/pce_st_core.js (module, MODULARIZE) and pce_st_core.wasm.
 # PCE's main(), its main loop and SDL are not used: core/st_glue.c is linked.
-# It does not modify the PCE clone: it builds a clean copy (git archive).
+# It does not modify PCE_SRC: it builds a copy of it (working tree, so uncommitted
+# patches are included; a .git directory is left out).
 
 set -euo pipefail
 
 PROJECT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-PCE_SRC=${PCE_SRC:-$HOME/Documents/GIT/pce}
+PCE_SRC=${PCE_SRC:-$PROJECT_DIR/third_party/pce}
 EMSDK_DIR=${EMSDK_DIR:-$HOME/emsdk}
 JOBS=${JOBS:-$(nproc)}
-PCE_REV_EXPECTED=b2e4b44
 
 BUILD_DIR=$PROJECT_DIR/build
 SRC_DIR=$BUILD_DIR/pce-src
@@ -30,15 +30,14 @@ if ! command -v emcc >/dev/null 2>&1; then
 fi
 echo "emcc: $(emcc --version | head -1)"
 
-[[ -d $PCE_SRC/.git ]] || { echo "ERROR: $PCE_SRC is not a PCE clone" >&2; exit 1; }
-rev=$(git -C "$PCE_SRC" rev-parse --short HEAD)
-echo "PCE: $rev"
-[[ $rev == "$PCE_REV_EXPECTED"* ]] || echo "WARNING: tested with $PCE_REV_EXPECTED, using $rev"
+[[ -f $PCE_SRC/configure && -d $PCE_SRC/src/arch/atarist ]] \
+  || { echo "ERROR: $PCE_SRC is not a PCE source tree" >&2; exit 1; }
+echo "PCE: $PCE_SRC"
 
-# Clean copy of the source, without artifacts from earlier builds.
+# Fresh copy of the source, without artifacts from earlier builds.
 rm -rf "$SRC_DIR" "$OUT_DIR"
 mkdir -p "$SRC_DIR" "$OUT_DIR" "$BUILD_DIR/bin"
-git -C "$PCE_SRC" archive HEAD | tar -x -C "$SRC_DIR"
+tar -C "$PCE_SRC" --exclude=./.git -cf - . | tar -x -C "$SRC_DIR"
 
 # PCE's scripts call "python".
 ln -sf "$(command -v python3)" "$BUILD_DIR/bin/python"

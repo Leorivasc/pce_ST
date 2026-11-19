@@ -11,16 +11,20 @@ Emulator by Hampa Hug, <http://www.hampa.ch/pce/>. Copyright (C) Hampa Hug
 2011–2022; the startup banner says 2011–2025). License: GPL v2. Based on version
 `20250420-cc0c583c`.
 
-PCE_ST does **not include** PCE's code in this repository: `scripts/build-core.sh`
-builds it from an external clone (the PCE.js fork) and links the result into
-`build/out/pce_st_core.wasm`. Anyone who distributes that binary must offer the
-corresponding PCE source code and keep these notices.
+PCE's source code **is included** in this repository, in `third_party/pce/`
+(added with `git subtree` from the PCE.js fork, commit `b2e4b44`, on 2026-11-19),
+with its original copyright notices. `scripts/build-core.sh` compiles it and
+links the result into `build/out/pce_st_core.wasm`. Changes made by PCE_ST to
+those files are listed in `implementation/NOTES.md` ("Patches to PCE"). Anyone
+who distributes the binary must offer the corresponding source code (this
+repository at the same commit) and keep these notices.
 
 ## PCE.js
 
 Browser port of PCE (Emscripten) by James Friend, <https://jamesfriend.com.au/>.
 Copyright (C) James Friend. License: GPL v2. Fork used:
-<https://github.com/Leorivasc/pce>, commit `b2e4b44`.
+<https://github.com/Leorivasc/pce>, commit `b2e4b44`, vendored in
+`third_party/pce/`.
 
 ## EmuTOS
 
