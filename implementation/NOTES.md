@@ -244,6 +244,10 @@ persistence and snapshots arrive in steps 3 and 4.
 
 ## What was verified and what was not
 
+This section records the first verification round (16 core tests, 38 browser tests); today
+the suites have 22 core tests, 13 library files, 13 automation tests, the MCP test and 41
+browser tests, and later findings list what each change verified.
+
 Verified in Node (16 tests): EmuTOS boot to the desktop in mono (640×400) and in
 color (320×200); determinism between instances; equivalence of stepping by cycles
 or by frames; audio at emulated-time pace; the PSG produces the programmed tone
@@ -261,10 +265,9 @@ joystick, touch trackpad, the mobile tools and input bar and the ROM notice.
 
 Not verified: **Firefox and Safari**, real touch devices (only emulated touch),
 the CRT filter's speed on a real GPU, tap and long-press clicks (only dragging
-is tested), joystick (how PCE exposes it
-to the terminal layer), ACSI hard disks, `.msa` and `.dim` formats, medium
+is tested), ACSI hard disks, the `.dim` format, medium
 resolution (640×200), audio drift in long sessions, memory growth in snapshots,
-STE.
+STE. (The joystick and `.msa` were verified later: finding 25 and `LIBRARY.md`.)
 
 ## Repository layout
 
@@ -450,6 +453,9 @@ when rerun alone and in 5 further full runs of the suite, so 1 failure in 7 runs
   `core.test.js`, three tests that drive the controller directly: Read Sector sees the table,
   Read Track sees the image (and back), no raw view means no difference, the raw view does not
   outlive the floppy. Checked by breaking the view switch and `pce_st_stx_raw_clear` on purpose.
+- **Checked by hand (user, 2026-11-19):** real `.stx` games run with the bundled EmuTOS (US);
+  those that failed with it, such as Afterburner, run with TOS 1.02 UK. This agrees with the
+  50/60 Hz cause above (PAL editions). Problems found in use will be handled as they appear.
 - **Not verified:** the other real discs beyond Afterburner and Space Harrier (same result as before for
   the latter); snapshots with an STX floppy mounted (the raw view is not part of the saved state);
   the page in a real browser with the worker loading `stx_convert.js` is covered by the browser
@@ -458,9 +464,9 @@ when rerun alone and in 5 further full runs of the suite, so 1 failure in 7 runs
 ## Next step (phase 2, after step 3)
 
 Done since step 3: snapshot UI, physical gamepad, headless automation + MCP server
-(`AUTOMATION.md`), WebDAV remote sync (ported, tested against a mock server) and floppies
-built from files/folders. Open: validate remote sync against a real Nextcloud and
-document the user's CORS setup; breakpoints/stepping in the automation (needs PCE's debugger
+(`AUTOMATION.md`), WebDAV remote sync (ported, tested against a mock server; **checked by
+hand against a real Nextcloud by the user, 2026-11-19**) and floppies built from
+files/folders. Open: breakpoints/stepping in the automation (needs PCE's debugger
 exported from the glue); driving the open browser page through MCP; `.dim`/ACSI images
 (need real samples). Unverified: real-GPU CRT speed, real touch devices, Firefox/Safari.
 

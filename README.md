@@ -1,9 +1,10 @@
 # PCE_ST
 
 An Atari ST emulator for the browser. The core is PCE (Hampa Hug, GPL v2)
-compiled to WebAssembly; the shell (interface, library, sync, automation) is
-being built from jsA8E's. Today there is a minimal working page (`web/`) and a
-tested core; the full shell is phase 2, step 2 (see `implementation/NOTES.md`).
+compiled to WebAssembly; the shell (interface, disk and ROM library, snapshots,
+WebDAV sync) comes from jsA8E's, and a headless automation API with an MCP
+server drives the same core from Node. Status and open work are in
+`implementation/NOTES.md`.
 
 **Project language: English.** Documentation, UI text (menus, buttons, labels),
 on-screen and error messages, code comments and test names are all in English.
@@ -24,6 +25,15 @@ on-screen and error messages, code comments and test names are all in English.
 Tested on Ubuntu 24.04 with Node 18.19, Python 3.12, make 4.3, git 2.43 and
 Chrome 157. Everything that gets installed lives in your home directory; nothing
 system-wide is touched.
+
+**On Windows**, use WSL (tested with Ubuntu 26.04): follow the same steps inside
+Ubuntu and work on the repository through `/mnt/c/...`. Git Bash is not enough
+(no `make`, and `./configure` needs a full POSIX system). Ubuntu's `chromium`
+package is a snap, which does not run well under WSL; install Google Chrome's
+`.deb` instead and run the browser tests with `CHROME=/usr/bin/google-chrome`.
+`.gitattributes` keeps the shell scripts with LF endings even when Git converts
+the checkout to CRLF. Building on a Windows drive takes about 1 minute.
+`scripts/serve.js` can also run with Windows' Node.
 
 ### 1. System tools
 
@@ -154,7 +164,7 @@ node tests/automation/mcp.test.js       # MCP server over stdio, ~10 s
 node tests/browser/browser.test.js  # page in real Chrome: 41 tests, ~5 min
 ```
 
-- Both need `scripts/build-core.sh` to have been run first.
+- All but the library suite need `scripts/build-core.sh` to have been run first.
 - The browser tests start their own server on a free port and launch headless
   Chrome (`CHROME=/path/to/browser` if it is not on the `PATH`).
 - A single test: `--only=text` (part of its name), for example
@@ -193,11 +203,15 @@ web/
   js/render/                 WebGL2 renderer with CRT filter, Canvas 2D fallback, shaders
   js/audio/                  AudioWorklet queue
   vendor/                    Font Awesome and fonts, served locally (no CDN)
+automation/          Headless automation API and MCP server (see AUTOMATION.md)
 scripts/
   build-core.sh      Builds PCE (clean copy) + st_glue.c -> build/out/
+  make-dist.sh       Builds the static site for deployment (see DEPLOY.md)
   serve.js           Static development server (no dependencies)
 tests/
   core/              Core tests in Node + test floppy images
+  library/           Library, sync, image format and .stx conversion tests
+  automation/        Headless automation API and MCP server tests
   browser/           Real-Chrome tests + minimal DevTools client
 roms/emutos/         EmuTOS 1.4 (GPL) with its license and source link
 implementation/      Notes, analysis and technical references
