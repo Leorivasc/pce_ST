@@ -1,0 +1,93 @@
+name: Publish web site
+
+# Builds the core (emsdk + vendored PCE), runs the Node test suites and
+# publishes dist/ to GitHub Pages. Publishing is deliberate: push (or merge
+# master) into web_publish, or run the workflow by hand.
+
+on:
+  push:
+    branches:
+      - web_publish
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+env:
+  EMSDK_VERSION: 7.0.0
+
+jobs:
+  build:
+    name: Build, test and package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the publication branch
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Restore emsdk from the cache
+        id: emsdk-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/emsdk
+          key: emsdk-${{ env.EMSDK_VERSION }}-${{ runner.os }}
+
+      - name: Install emsdk
+        if: steps.emsdk-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git ~/emsdk
+          ~/emsdk/emsdk install "$EMSDK_VERSION"
+          ~/emsdk/emsdk activate "$EMSDK_VERSION"
+
+      - name: Build the core
+        run: scripts/build-core.sh
+
+      - name: Core tests
+        run: node tests/core/core.test.js
+
+      - name: Library tests
+        run: |
+          for t in library_archive library_package disk_library st_image snapshot_codec gamepad \
+                   remote_workspace remote_library remote_library_metadata remote_library_tombstones \
+                   remote_library_prg_blobs stx_library stx_convert; do
+            node "tests/library/$t.test.js"
+          done
+
+      - name: Automation tests
+        run: node tests/automation/headless.test.js
+
+      - name: MCP server test
+        run: node tests/automation/mcp.test.js
+
+      - name: Assemble dist/
+        run: scripts/make-dist.sh
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    name: Deploy GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy the site artifact
+        id: deployment
+        uses: actions/deploy-pages@v4

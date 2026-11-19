@@ -1,7 +1,8 @@
-# Publishing PCE_ST on an Apache server
+# Publishing PCE_ST
 
-PCE_ST is a static site: HTML, JavaScript, a WASM file and the EmuTOS ROM. Apache only
-has to serve files. The one real problem is **remote sync**, because the browser talks
+PCE_ST is a static site: HTML, JavaScript, a WASM file and the EmuTOS ROM. Sections 1-4
+cover your own Apache server; section 5 covers GitHub Pages, built and published by
+GitHub Actions. The web server only has to serve files. The one real problem is **remote sync**, because the browser talks
 to your WebDAV server (Nextcloud) directly, so CORS matters. Both are covered below.
 
 ## 1. Build the site
@@ -176,3 +177,40 @@ not exist or `MKCOL` is not allowed; "no ETag" means `Expose-Headers` lacks `ETa
 3. The ROM button shows "EmuTOS" with a green LED.
 4. Library panel, Configure, Connect: the LED turns green and `library.json` appears in
    the remote folder after the first sync.
+
+## 5. GitHub Pages
+
+The workflow `.github/workflows/publish-web.yml` publishes the site at
+`https://<user>.github.io/pce_ST/`. Nothing compiled is committed: GitHub builds it.
+
+**When it runs:** on every push to the `web_publish` branch, or by hand (Actions tab,
+"Publish web site", "Run workflow"). Publishing is a deliberate step: bring
+`web_publish` up to date with `master` when you want a new version online:
+
+```bash
+git checkout web_publish
+git merge --ff-only master      # or: git merge master
+git push origin web_publish
+git checkout master
+```
+
+**What it does:** installs emsdk 7.0.0 (cached between runs), builds the core from the
+vendored PCE (`scripts/build-core.sh`), runs the core, library, automation and MCP test
+suites, assembles `dist/` (`scripts/make-dist.sh`) and deploys it. If a test fails,
+nothing is published and the site keeps the previous version. The browser suite does
+not run there; run it locally before publishing.
+
+**One-time setup:** repository Settings, Pages, "Build and deployment", Source: **GitHub
+Actions**.
+
+**Differences from Apache:**
+
+- `.htaccess` is ignored. GitHub Pages already serves `.wasm` as `application/wasm`
+  and compresses responses; only the cache rules are lost (Pages caches for about 10
+  minutes, so a new version can take that long to show up, or use a hard reload).
+- The site lives under a subpath (`/pce_ST/`). That works because every path in the page
+  is relative (checked: `dist/` served under `/pce_ST/` boots EmuTOS at 71 fps).
+- **Remote sync:** the page and your Nextcloud are on different origins, so option A of
+  section 3 (same origin) is not possible; use **option B** with the origin
+  `https://<user>.github.io` (no `/pce_ST`: an origin has no path). The rest of
+  section 3 applies unchanged.

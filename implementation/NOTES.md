@@ -489,6 +489,18 @@ change can live there without tricks.
 |---|---|---|---|
 | (none yet) | | | |
 
+## GitHub Pages (2026-11-19)
+
+- **Decision (user):** publish from the `web_publish` branch, built by GitHub Actions
+  (`.github/workflows/publish-web.yml`); `dist/` and `build/` stay out of git. The
+  workflow builds the core, runs the core, library, automation and MCP suites, and
+  deploys `dist/` only if they pass. Instructions in `DEPLOY.md` section 5.
+- **Verified here:** `dist/` served under a subpath (`/pce_ST/`, as on Pages) by a plain
+  static server redirects to `web/` and boots EmuTOS at 71 fps, 1.00×.
+- **Not verified:** the workflow on GitHub's runners (it has not run yet: it needs a push
+  to `web_publish` and Pages set to "GitHub Actions"); remote sync from the
+  `github.io` origin (needs option B CORS headers on the Nextcloud).
+
 ## Next step (phase 2, after step 3)
 
 Done since step 3: snapshot UI, physical gamepad, headless automation + MCP server
