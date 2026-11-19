@@ -1,4 +1,4 @@
-# PCE_ST
+# PCE_ST: Your ATARI ST CYBERDECK
 
 An Atari ST emulator for the browser. The core is PCE (Hampa Hug, GPL v2)
 compiled to WebAssembly; the shell (interface, disk and ROM library, snapshots,
@@ -18,6 +18,7 @@ on-screen and error messages, code comments and test names are all in English.
 - [Troubleshooting](#troubleshooting)
 - [Repository layout](#repository-layout)
 - [Documentation](#documentation)
+- [Credits](#credits)
 - [License](#license)
 
 ## Getting started from scratch
@@ -233,6 +234,15 @@ build/               Build output (not versioned)
   phase 2 plan.
 - `implementation/LIBRARY.md`: plan for the disk library (step 3).
 - `requirements.md`: goal, scope, risks and open questions.
+
+## Credits
+
+- **Leonel Rivas**: project supervision.
+- **Claude** (Anthropic), through Claude Code: programming.
+
+The emulation core and the ROM are the work of their authors (PCE by Hampa Hug,
+PCE.js by James Friend, EmuTOS by the EmuTOS team); see `NOTICE.md` for all
+attributions.
 
 ## License
 
