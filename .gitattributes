@@ -1,2 +1,5 @@
 # Shell scripts must keep LF endings, also in Windows checkouts (bash rejects CRLF).
 *.sh text eol=lf
+# Vendored PCE sources (git subtree): stored and checked out byte for byte, so
+# ./configure and make see LF endings when building from a Windows checkout.
+third_party/pce/** -text
