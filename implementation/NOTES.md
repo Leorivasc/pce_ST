@@ -33,13 +33,21 @@ PCE's source is in the repository (`third_party/pce/`, see "PCE inside the
 repository" below); `PCE_SRC` builds against another tree.
 
 ```bash
-scripts/build-core.sh                              # ~30 s -> build/out/
-node tests/core/core.test.js                       # 22 tests, ~35 s
-node tests/browser/browser.test.js                 # 41 tests in real Chrome, ~5 min
+scripts/build-core.sh                              # 30 s - 2 min -> build/out/
+node tests/core/core.test.js                       # 22 tests, ~30 s
+for t in library_archive library_package disk_library st_image snapshot_codec gamepad remote_workspace remote_library remote_library_metadata remote_library_tombstones remote_library_prg_blobs stx_library stx_convert; do node tests/library/$t.test.js || break; done   # 13 files, ~10 s
+node tests/automation/headless.test.js             # 13 tests, ~1 min
+node tests/automation/mcp.test.js                  # MCP server over stdio, a few seconds
+node tests/browser/browser.test.js                 # 41 tests in real Chrome, ~1-2 min
 node scripts/serve.js [port]                       # the page at http://127.0.0.1:8080/
 node tests/core/core.test.js --only=floppy         # a single test
 node tests/core/core.test.js /other/rom.img        # with another ROM
 ```
+
+Times measured on 2026-11-19 under WSL (4 cores, 3 GB): build 84-117 s (on a Windows
+drive), core 30 s, library 7 s, automation 46 s, MCP 3 s, browser 69 s. The first
+measurements on the original Linux machine were 30 s for the build and ~5 min for
+the browser suite (with fewer tests); timings vary a lot with the machine.
 
 - Output: `build/out/pce_st_core.js` (`MODULARIZE` module, factory
   `PCE_STCoreFactory`) and `pce_st_core.wasm` (~360 KB). The JS loads the `.wasm`
@@ -48,8 +56,10 @@ node tests/core/core.test.js /other/rom.img        # with another ROM
   built) to `build/pce-src` and compiles the copy; it never writes into
   `third_party/pce/`. Until 2026-11-19 the project's own code was all in `core/`
   and PCE was not patched; patches are now allowed (see below).
-- Tested versions: Emscripten **7.0.0**, PCE `b2e4b44`, Node 18.19.1,
-  Python 3.12, EmuTOS 1.4.
+- Tested versions: Emscripten **7.0.0**, PCE `b2e4b44`, EmuTOS 1.4; on Ubuntu
+  24.04 with Node 18.19.1 and Python 3.12, and (2026-11-19) on Windows 11 with
+  WSL (Ubuntu 26.04, Node 22.22, Python 3, Google Chrome from its `.deb`; see
+  `README.md`, "On Windows").
 - **Default ROM included**: `roms/emutos/etos192us.img` (EmuTOS 1.4, 192 KB, US,
   GPL) with its license, authors, SHA-256 and source link in
   `roms/emutos/README.md`. Atari TOS ROMs are not included (copyrighted); if the
@@ -278,9 +288,12 @@ does and where its reference is:
 | Part | Reference |
 |---|---|
 | `core/` (C glue and configuration) | `CORE_API.md` |
-| `web/` (page, worker, audio, keyboard) | `WEB.md` |
-| `scripts/` (`build-core.sh`, `serve.js`) | `README.md` (getting started) |
-| `tests/` (core in Node, browser in Chrome) | `README.md` (tests), `WEB.md` |
+| `web/` (page, worker, audio, keyboard, library) | `WEB.md`, `LIBRARY.md` |
+| `automation/` (headless API and MCP server) | `../AUTOMATION.md` |
+| `third_party/pce/` (PCE's source, git subtree) | "PCE inside the repository" above |
+| `scripts/` (`build-core.sh`, `make-dist.sh`, `serve.js`) | `README.md` (getting started), `../DEPLOY.md` |
+| `.github/workflows/publish-web.yml` (GitHub Pages) | `../DEPLOY.md` section 5 |
+| `tests/` (`core/`, `library/`, `automation/`, `browser/`) | `README.md` (tests), `WEB.md` |
 | `roms/emutos/` | `roms/emutos/README.md` |
 | Analysis of jsA8E's shell | `jsA8E_integration.md` |
 | Library plan (step 3) | `LIBRARY.md` |

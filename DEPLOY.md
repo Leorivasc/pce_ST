@@ -2,17 +2,23 @@
 
 PCE_ST is a static site: HTML, JavaScript, a WASM file and the EmuTOS ROM. Sections 1-4
 cover your own Apache server; section 5 covers GitHub Pages, built and published by
-GitHub Actions. The web server only has to serve files. The one real problem is **remote sync**, because the browser talks
-to your WebDAV server (Nextcloud) directly, so CORS matters. Both are covered below.
+GitHub Actions. The web server only has to serve files. The one real problem is
+**remote sync**, because the browser talks to your WebDAV server (Nextcloud) directly,
+so CORS matters (section 3, for both cases).
 
 ## 1. Build the site
 
-On the machine where the core is built (see README, "Build"):
+On the machine where the core is built (see README, "Getting started"; on Windows,
+inside WSL). The only requirement is emsdk: PCE's source is in the repository
+(`third_party/pce/`).
 
 ```bash
-scripts/build-core.sh      # once, or after changing core/ (needs emsdk)
+scripts/build-core.sh      # once, or after changing core/ or third_party/pce/ (~1 min)
 scripts/make-dist.sh       # assembles dist/ (about 2 MB)
 ```
+
+`dist/` and `build/` are not versioned (`.gitignore`); GitHub Pages builds its own
+(section 5).
 
 `dist/` keeps the layout the page expects (`web/`, `build/out/`, `core/`, `roms/`);
 **do not rearrange it**: the page reaches the WASM core and the ROM with relative
@@ -181,27 +187,65 @@ not exist or `MKCOL` is not allowed; "no ETag" means `Expose-Headers` lacks `ETa
 ## 5. GitHub Pages
 
 The workflow `.github/workflows/publish-web.yml` publishes the site at
-`https://<user>.github.io/pce_ST/`. Nothing compiled is committed: GitHub builds it.
+`https://<user>.github.io/pce_ST/` (for example
+`https://octocat.github.io/pce_ST/` for the GitHub user `octocat`; a fork publishes
+under its own user). Nothing compiled is committed: GitHub builds it.
 
 **When it runs:** on every push to the `web_publish` branch, or by hand (Actions tab,
 "Publish web site", "Run workflow"). Publishing is a deliberate step: bring
 `web_publish` up to date with `master` when you want a new version online:
 
 ```bash
+# 1. Locally, on master: the browser suite (GitHub does not run it).
+#    In WSL: CHROME=/usr/bin/google-chrome node tests/browser/browser.test.js
+node tests/browser/browser.test.js
+
+# 2. Bring web_publish up to master and push both
 git checkout web_publish
-git merge --ff-only master      # or: git merge master
-git push origin web_publish
+git merge --ff-only master      # fails if web_publish has its own commits: then git merge master
+git push origin master web_publish
 git checkout master
 ```
+
+Keep `web_publish` without commits of its own, so `--ff-only` always works and the site is
+exactly a commit of `master`.
 
 **What it does:** installs emsdk 7.0.0 (cached between runs), builds the core from the
 vendored PCE (`scripts/build-core.sh`), runs the core, library, automation and MCP test
 suites, assembles `dist/` (`scripts/make-dist.sh`) and deploys it. If a test fails,
 nothing is published and the site keeps the previous version. The browser suite does
-not run there; run it locally before publishing.
+not run there (it would add about 5 minutes per publication); run it locally before
+publishing, as above.
 
-**One-time setup:** repository Settings, Pages, "Build and deployment", Source: **GitHub
-Actions**.
+**Time:** the first run downloads emsdk (about 300 MB) and takes several minutes; later
+runs restore it from the cache (`emsdk-7.0.0-Linux`) and take a few minutes (build about
+1 minute, tests about 2). When `EMSDK_VERSION` changes in the workflow, the cache key
+changes and emsdk is downloaded again.
+
+**One-time setup** (repository Settings):
+
+1. Pages, "Build and deployment", Source: **GitHub Actions**. If it is still "Deploy from
+   a branch", the deploy step fails.
+2. Environments, `github-pages` (created by step 1), "Deployment branches and tags": add
+   `web_publish`. By default only the default branch (`master`) may deploy, and the first
+   run would end with "Branch web_publish is not allowed to deploy to github-pages".
+
+**Following a run:** Actions tab, "Publish web site". The `build` job shows each step
+(build, every suite, `dist/`); `deploy` gives the site's URL. To publish again without new
+commits (for example after fixing the Pages setting): "Run workflow" on `web_publish`.
+
+**If it fails:**
+
+| Step | Likely cause |
+|---|---|
+| Install emsdk | GitHub or Google storage unreachable: rerun the job. |
+| Build the core | Compiler error from a change in `core/` or `third_party/pce/`: reproduce with `scripts/build-core.sh` locally; the log is in `build/make.log`, which the runner does not keep, so the step prints the first errors. |
+| A test suite | A real failure on `master`: fix it there, then publish again. For a suspected flaky test, rerun the job once; if it passes, record it as flaky (see `CLAUDE.md`). |
+| Deploy | One of the two one-time settings above is missing ("not allowed to deploy" means the environment's branch rule). |
+
+**Checking the published site:** the checklist of section 4 applies with the site's URL
+(`https://<user>.github.io/pce_ST/`). After a new deployment, a hard reload
+(Ctrl+Shift+R) avoids the cached previous version.
 
 **Differences from Apache:**
 
@@ -213,4 +257,15 @@ Actions**.
 - **Remote sync:** the page and your Nextcloud are on different origins, so option A of
   section 3 (same origin) is not possible; use **option B** with the origin
   `https://<user>.github.io` (no `/pce_ST`: an origin has no path). The rest of
-  section 3 applies unchanged.
+  section 3 applies unchanged; the preflight check becomes:
+
+  ```bash
+  curl -si -X OPTIONS https://cloud.example.org/remote.php/dav/files/USER/PCE_ST/ \
+    -H "Origin: https://<user>.github.io" \
+    -H "Access-Control-Request-Method: PUT" \
+    -H "Access-Control-Request-Headers: authorization,if-match,content-type" | head -20
+  ```
+
+- The library, snapshots and preferences are stored in the browser per origin: what you
+  keep on `https://<user>.github.io` is separate from a local `http://127.0.0.1:8080`
+  or your Apache site. Remote sync is the way to share a library between them.

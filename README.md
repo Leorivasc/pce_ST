@@ -33,7 +33,8 @@ Ubuntu and work on the repository through `/mnt/c/...`. Git Bash is not enough
 package is a snap, which does not run well under WSL; install Google Chrome's
 `.deb` instead and run the browser tests with `CHROME=/usr/bin/google-chrome`.
 `.gitattributes` keeps the shell scripts with LF endings even when Git converts
-the checkout to CRLF. Building on a Windows drive takes about 1 minute.
+the checkout to CRLF (and PCE's sources in `third_party/pce/` byte for byte).
+Building on a Windows drive takes 1.5 to 2 minutes.
 `scripts/serve.js` can also run with Windows' Node.
 
 ### 1. System tools
@@ -74,11 +75,12 @@ tree: `PCE_SRC=/path/to/pce scripts/build-core.sh`.
 ### 4. Build the core
 
 ```bash
-cd ~/Documents/GIT/pce_ST
+cd /path/to/pce_ST          # your clone of this repository
 scripts/build-core.sh
 ```
 
-It takes about 30 s. When it finishes it leaves in `build/out/`:
+It takes 30 s to 2 min, depending on the machine (longer on a Windows drive
+under WSL). When it finishes it leaves in `build/out/`:
 
 - `pce_st_core.js` (module) and `pce_st_core.wasm` (~360 KB). They always go
   together.
@@ -156,11 +158,11 @@ theme by default.
 ## Tests
 
 ```bash
-node tests/core/core.test.js        # core in Node: 22 tests, ~35 s
-for t in library_archive library_package disk_library st_image snapshot_codec gamepad remote_workspace remote_library remote_library_metadata remote_library_tombstones remote_library_prg_blobs stx_library stx_convert; do node tests/library/$t.test.js; done   # library, seconds
-node tests/automation/headless.test.js  # automation API: 13 tests, ~80 s
-node tests/automation/mcp.test.js       # MCP server over stdio, ~10 s
-node tests/browser/browser.test.js  # page in real Chrome: 41 tests, ~5 min
+node tests/core/core.test.js        # core in Node: 22 tests, ~30 s
+for t in library_archive library_package disk_library st_image snapshot_codec gamepad remote_workspace remote_library remote_library_metadata remote_library_tombstones remote_library_prg_blobs stx_library stx_convert; do node tests/library/$t.test.js || break; done   # library, ~10 s
+node tests/automation/headless.test.js  # automation API: 13 tests, ~1 min
+node tests/automation/mcp.test.js       # MCP server over stdio, a few seconds
+node tests/browser/browser.test.js  # page in real Chrome: 41 tests, ~1-2 min
 ```
 
 - All but the library suite need `scripts/build-core.sh` to have been run first.

@@ -22,8 +22,9 @@ improvement. `README.md` has the full setup and troubleshooting.
 
 ## Project commands
 
-Prerequisite: the core must be built (`scripts/build-core.sh`, about 30 s; needs
-emsdk and the PCE clone, see `README.md`). Run everything from the repo root.
+Prerequisite: the core must be built (`scripts/build-core.sh`, 30 s - 2 min; needs
+emsdk; PCE's source is in `third_party/pce/`; see `README.md`). Run everything from
+the repo root. On Windows, build and test inside WSL (`README.md`, "On Windows").
 
 | Suite | Command | Time |
 |---|---|---|

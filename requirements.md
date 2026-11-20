@@ -462,6 +462,10 @@ Outside the first phase by the user's decision. Notes for when it comes:
 
 ## 13. How to rebuild the context
 
+(Historical. Since 2026-11-19 PCE's source is part of this repository, in
+`third_party/pce/`, so there is nothing to clone; see `implementation/NOTES.md`,
+"PCE inside the repository".)
+
 - Clone the PCE.js fork: `git clone https://github.com/Leorivasc/pce` (last
   commit seen: `b2e4b44`). Read `README.md` (build instructions), `pcejs_build`,
   `src/arch/atarist/` and `src/arch/atarist/pce-atarist.cfg.in`.
