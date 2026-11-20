@@ -32,7 +32,7 @@ the repo root. On Windows, build and test inside WSL (`README.md`, "On Windows")
 | Library (13 files) | `for t in library_archive library_package disk_library st_image snapshot_codec gamepad remote_workspace remote_library remote_library_metadata remote_library_tombstones remote_library_prg_blobs stx_library stx_convert; do node tests/library/$t.test.js \|\| exit 1; done` | seconds |
 | Automation API (13 tests) | `node tests/automation/headless.test.js` | ~85 s |
 | MCP server | `node tests/automation/mcp.test.js` | ~4 s |
-| Page in real Chrome (41 tests) | `node tests/browser/browser.test.js` | ~2 min |
+| Page in real Chrome (43 tests) | `node tests/browser/browser.test.js` | ~2 min |
 
 - **One test:** `--only=<part of its name>`, for example
   `node tests/browser/browser.test.js --only="ROM library"`.

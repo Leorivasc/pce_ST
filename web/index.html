@@ -9,7 +9,7 @@
       // Apply the stored UI theme before the first paint (no flash of the default).
       (function () {
         var themes = ["classic", "800xl", "xegs", "65xe", "400-800", "st", "2600"];
-        var theme = "st";
+        var theme = "classic";
         try {
           var stored = String(window.localStorage.getItem("pce_st_ui_theme") || "").toLowerCase();
           if (themes.indexOf(stored) >= 0) theme = stored;
@@ -157,10 +157,10 @@
             </div>
           </div>
           <div class="layoutSchemeControls" role="group" aria-label="Presentation layout">
-            <button id="btnLayoutEmulation" class="layoutSchemeBtn active" type="button" data-layout-scheme="emulation" aria-pressed="true" title="Use the Emulation layout." aria-label="Use the Emulation layout.">
+            <button id="btnLayoutEmulation" class="layoutSchemeBtn" type="button" data-layout-scheme="emulation" aria-pressed="false" title="Use the Emulation layout." aria-label="Use the Emulation layout.">
               <i class="fa-solid fa-gamepad" aria-hidden="true"></i>
             </button>
-            <button id="btnLayoutWork" class="layoutSchemeBtn" type="button" data-layout-scheme="work" aria-pressed="false" title="Use the Work layout: the floppy library next to the screen." aria-label="Use the Work layout.">
+            <button id="btnLayoutWork" class="layoutSchemeBtn active" type="button" data-layout-scheme="work" aria-pressed="true" title="Use the Work layout: the floppy library next to the screen." aria-label="Use the Work layout.">
               <i class="fa-solid fa-briefcase" aria-hidden="true"></i>
             </button>
           </div>
@@ -206,12 +206,12 @@
             <label class="toolbarSelectWrap" title="Choose the interface colors inspired by Atari hardware models.">
               <span>Theme</span>
               <select id="uiThemeSelect" class="toolbarSelect toolbarSelectWide" aria-label="Interface theme">
-                <option value="classic">CyberDeck</option>
+                <option value="classic" selected>CyberDeck</option>
                 <option value="800xl">Atari 800XL</option>
                 <option value="xegs">Atari XEGS</option>
                 <option value="65xe">Atari 65XE/130XE</option>
                 <option value="400-800">Atari 400/800</option>
-                <option value="st" selected>Atari ST</option>
+                <option value="st">Atari ST</option>
                 <option value="2600">Atari 2600 Woodgrain</option>
               </select>
             </label>
@@ -220,7 +220,7 @@
       </div>
     </header>
 
-    <main class="layout" data-layout-scheme="emulation">
+    <main class="layout" data-layout-scheme="work">
       <section class="screenPanel">
         <div class="screenViewport">
           <canvas id="screen" width="640" height="400"></canvas>

@@ -38,7 +38,7 @@ node tests/core/core.test.js                       # 22 tests, ~30 s
 for t in library_archive library_package disk_library st_image snapshot_codec gamepad remote_workspace remote_library remote_library_metadata remote_library_tombstones remote_library_prg_blobs stx_library stx_convert; do node tests/library/$t.test.js || break; done   # 13 files, ~10 s
 node tests/automation/headless.test.js             # 13 tests, ~1 min
 node tests/automation/mcp.test.js                  # MCP server over stdio, a few seconds
-node tests/browser/browser.test.js                 # 41 tests in real Chrome, ~1-2 min
+node tests/browser/browser.test.js                 # 43 tests in real Chrome, ~1-2 min
 node scripts/serve.js [port]                       # the page at http://127.0.0.1:8080/
 node tests/core/core.test.js --only=floppy         # a single test
 node tests/core/core.test.js /other/rom.img        # with another ROM
@@ -256,7 +256,7 @@ persistence and snapshots arrive in steps 3 and 4.
 ## What was verified and what was not
 
 This section records the first verification round (16 core tests, 38 browser tests); today
-the suites have 22 core tests, 13 library files, 13 automation tests, the MCP test and 41
+the suites have 22 core tests, 13 library files, 13 automation tests, the MCP test and 43
 browser tests, and later findings list what each change verified.
 
 Verified in Node (16 tests): EmuTOS boot to the desktop in mono (640×400) and in
@@ -475,6 +475,23 @@ when rerun alone and in 5 further full runs of the suite, so 1 failure in 7 runs
   the page in a real browser with the worker loading `stx_convert.js` is covered by the browser
   suite only through the existing `.stx` tests.
 
+## Finding 33: new defaults, and the Work layout on a phone (2026-11-20)
+
+- **Decision (user):** a first visit opens with the **CyberDeck** theme (`classic`) and the
+  **Work** layout; unknown stored values fall back to them. Browser test: "a first visit
+  opens with the CyberDeck theme and the Work layout...". Two existing tests encoded the old
+  defaults and were changed with the user's approval: the interface test now expects
+  `classic`, and the theme selector test picks Atari ST (picking the default could not fail).
+  The Work layout test now switches to Emulation first to see the panel appear.
+- **Bug it exposed (pre-existing):** the layout was applied only at startup. With the Work
+  layout, a viewport that shrank to phone width (rotated tablet, narrowed window) kept the
+  library open, which on a phone is a full-screen sheet over the screen. Before, only users
+  who had chosen Work could see it; with Work as the default, the existing test "on a phone
+  the library opens as a full-screen sheet..." failed. Fix: `ui.js` applies the layout again
+  when the viewport crosses the phone breakpoint. New test: "crossing the phone breakpoint
+  applies the Work layout again..." (fails without the fix).
+- **Not verified:** a real tablet rotating across the breakpoint (only emulated viewports).
+
 ## PCE inside the repository (2026-11-19)
 
 - **Decision (user):** PCE's source is vendored with `git subtree` in
@@ -510,9 +527,18 @@ change can live there without tricks.
   deploys `dist/` only if they pass. Instructions in `DEPLOY.md` section 5.
 - **Verified here:** `dist/` served under a subpath (`/pce_ST/`, as on Pages) by a plain
   static server redirects to `web/` and boots EmuTOS at 71 fps, 1.00×.
-- **Not verified:** the workflow on GitHub's runners (it has not run yet: it needs a push
-  to `web_publish` and Pages set to "GitHub Actions"); remote sync from the
-  `github.io` origin (needs option B CORS headers on the Nextcloud).
+- **Verified on GitHub (2026-11-20):** the first run (started by hand, commit `af655da`)
+  built, passed the four suites and deployed in about 3 minutes. The published site
+  serves the core as `application/wasm` and boots EmuTOS at 71 fps, 1.00× in headless
+  Chrome; the user also checked it in a browser. Before the switch, Pages was set to
+  "Deploy from a branch" and served `web_publish` as it is, without `build/out/` (the
+  core answered 404).
+- **Open:** the push to `web_publish` (2026-11-20 00:10 UTC, together with `master`) did
+  not start the workflow; the run had to be started by hand. Probably the push arrived
+  before Pages was switched to "GitHub Actions", but that is not confirmed: check that
+  the next push starts it by itself.
+- **Not verified:** remote sync from the `github.io` origin (needs option B CORS headers
+  on the Nextcloud).
 
 ## Next step (phase 2, after step 3)
 

@@ -102,8 +102,9 @@ load `.wasm` or workers from disk, so the server is required.
 ## Using the page
 
 The page starts the machine by itself (EmuTOS boots in ~18 s of emulated time;
-with **turbo** it takes ~3 s). It has the look of jsA8E, with the **Atari ST**
-theme by default.
+with **turbo** it takes ~3 s). It has the look of jsA8E, with the **CyberDeck**
+theme and the **Work** layout (the floppy library next to the screen) by default;
+both choices are remembered.
 
 | Control (toolbar) | What it does |
 |---|---|
@@ -162,7 +163,7 @@ node tests/core/core.test.js        # core in Node: 22 tests, ~30 s
 for t in library_archive library_package disk_library st_image snapshot_codec gamepad remote_workspace remote_library remote_library_metadata remote_library_tombstones remote_library_prg_blobs stx_library stx_convert; do node tests/library/$t.test.js || break; done   # library, ~10 s
 node tests/automation/headless.test.js  # automation API: 13 tests, ~1 min
 node tests/automation/mcp.test.js       # MCP server over stdio, a few seconds
-node tests/browser/browser.test.js  # page in real Chrome: 41 tests, ~1-2 min
+node tests/browser/browser.test.js  # page in real Chrome: 43 tests, ~1-2 min
 ```
 
 - All but the library suite need `scripts/build-core.sh` to have been run first.

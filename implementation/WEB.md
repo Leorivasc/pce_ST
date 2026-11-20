@@ -186,8 +186,8 @@ value played since the last report; 0 = exact silence). The proxy creates the
 - **Toolbar**: run/pause, reset (power cycle), audio, ROM, open floppy in A:,
   save floppy A:, CRT, display fullscreen, workspace fullscreen, turbo, mouse
   capture, and a collapsible row with **Monitor** (mono/color), **Memory**
-  (512K, 1 MB, 2 MB, 4 MB) and **Theme** (CyberDeck, 800XL, XEGS, 65XE/130XE,
-  400/800, **Atari ST** by default, 2600). Changing monitor or memory restarts
+  (512K, 1 MB, 2 MB, 4 MB) and **Theme** (**CyberDeck** by default, value
+  `classic`; 800XL, XEGS, 65XE/130XE, 400/800, Atari ST, 2600). Changing monitor or memory restarts
   the machine.
 - **ROM**: EmuTOS is loaded from `roms/emutos/`. The ROM button loads another
   192K image (other sizes are rejected), keeps it in the ROM library (IndexedDB)
@@ -202,12 +202,14 @@ value played since the last report; 0 = exact silence). The proxy creates the
   tools sheet (CRT, turbo, fullscreen, machine settings, ROM, floppy, save)
   replace the toolbar's secondary controls. The action bar shows one input device
   at a time.
-- **Layouts**: two buttons next to the toolbar select the scheme. *Emulation* (the
-  default) shows only the screen; *Work* puts the floppy library in a left column
+- **Layouts**: two buttons next to the toolbar select the scheme. *Emulation* shows
+  only the screen; *Work* (the default) puts the floppy library in a left column
   next to the screen, with a draggable splitter (arrow keys also resize it; the
   ratio is remembered). The library button shows or hides the panel in either
   scheme. On a phone the panel is a full-screen sheet with a backdrop, opened from
-  the tools sheet ("Library").
+  the tools sheet ("Library"); the layout never opens it there. When the viewport
+  crosses the phone breakpoint the layout is applied again, so a rotated tablet or a
+  narrowed window does not keep the library open as a sheet over the screen.
 - **Floppy library panel**: mounted devices (A:/B:), upload and drag-and-drop of
   `.st`/`.prg`, new folder, new blank 720K floppy, select/download/delete
   selected, recoverable trash (purge all or older than a date), search with type,

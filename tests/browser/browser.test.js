@@ -149,7 +149,7 @@ test("the interface is in English and reflects the machine state", async functio
   assert.strictEqual(ui.romName, "EmuTOS");
   assert.strictEqual(ui.romLoaded, true);
   assert.ok(/fps/.test(ui.status) && /640x400/.test(ui.status), "status line: " + ui.status);
-  assert.strictEqual(ui.theme, "st");
+  assert.strictEqual(ui.theme, "classic");
   assert.strictEqual(ui.resetDisabled, false);
   const text = await page.evaluate("document.body.innerText");
   assert.ok(!/\b(Iniciar|Pausa|Reiniciar|Velocidad|Guardar|Montar)\b/.test(text), "unexpected non-English text");
@@ -326,10 +326,30 @@ test("a ROM chosen with the file selector restarts the machine; a wrong size is 
 test("the theme selector applies and remembers the theme", async function () {
   const page = await openPage();
   await page.evaluate("__click('btnControlsCollapse')");
-  await page.evaluate("__select('uiThemeSelect', 'classic')");
-  assert.strictEqual(await page.evaluate("document.documentElement.dataset.uiTheme"), "classic");
-  assert.strictEqual(await page.evaluate("localStorage.getItem('pce_st_ui_theme')"), "classic");
+  // Atari ST, not the default (CyberDeck), so the test proves that the choice changes the theme.
+  await page.evaluate("__select('uiThemeSelect', 'st')");
+  assert.strictEqual(await page.evaluate("document.documentElement.dataset.uiTheme"), "st");
+  assert.strictEqual(await page.evaluate("localStorage.getItem('pce_st_ui_theme')"), "st");
   await page.close();
+});
+
+test("a first visit opens with the CyberDeck theme and the Work layout; unknown stored values fall back to them", async function () {
+  const READ = `({
+    theme: document.documentElement.dataset.uiTheme,
+    themeSelect: document.getElementById('uiThemeSelect').value,
+    layout: document.querySelector('.layout').dataset.layoutScheme,
+    workPressed: document.getElementById('btnLayoutWork').getAttribute('aria-pressed'),
+    emulationPressed: document.getElementById('btnLayoutEmulation').getAttribute('aria-pressed'),
+    libraryHidden: document.getElementById('diskLibraryPanel').hidden,
+  })`;
+  const EXPECTED = { theme: "classic", themeSelect: "classic", layout: "work", workPressed: "true", emulationPressed: "false", libraryHidden: false };
+  const page = await openPage();
+  assert.deepStrictEqual(await page.evaluate(READ), EXPECTED, "first visit");
+  await page.evaluate("localStorage.setItem('pce_st_ui_theme', 'no-such-theme'); localStorage.setItem('pce_st_layout_scheme', 'no-such-layout'); true");
+  await page.close(true);
+  const again = await openPage();
+  assert.deepStrictEqual(await again.evaluate(READ), EXPECTED, "after storing unknown values");
+  await again.close();
 });
 
 test("a snapshot restores the exact machine state", async function () {
@@ -619,6 +639,9 @@ test("the ROM notice exists, is wired up and stays hidden while a ROM is loaded"
 test("the Work layout shows the floppy library: upload, mount in A:, search, trash", async function () {
   const page = await openPage();
   const tag = "W" + Date.now().toString(36).toUpperCase().slice(-7);
+  // The page opens in the Work layout: switch to Emulation first to see the panel appear.
+  await page.evaluate("__click('btnLayoutEmulation')");
+  assert.strictEqual(await page.evaluate("document.querySelector('.layout').dataset.layoutScheme"), "emulation");
   assert.strictEqual(await page.evaluate("document.getElementById('diskLibraryPanel').hidden"), true, "hidden in the Emulation layout");
   await page.evaluate("__click('btnLayoutWork')");
   assert.strictEqual(await page.evaluate("document.querySelector('.layout').dataset.layoutScheme"), "work");
@@ -680,6 +703,19 @@ test("on a phone the library opens as a full-screen sheet and the backdrop close
   await page.evaluate("document.getElementById('mobilePanelBackdrop').click()");
   assert.strictEqual(await page.evaluate("document.getElementById('diskLibraryPanel').hidden"), true);
   assert.strictEqual(await page.evaluate("document.body.classList.contains('mobile-panel-open')"), false);
+  await page.close();
+});
+
+test("crossing the phone breakpoint applies the Work layout again: no library sheet on a phone, the library back on a desktop", async function () {
+  const page = await openPage();
+  const state = "({ hidden: document.getElementById('diskLibraryPanel').hidden, sheet: document.body.classList.contains('mobile-panel-open') })";
+  assert.deepStrictEqual(await page.evaluate(state), { hidden: false, sheet: false }, "desktop, Work layout");
+  await page.setViewport(390, 780, true);
+  await page.waitFor("document.getElementById('diskLibraryPanel').hidden", 5000, "library closed on the phone");
+  assert.deepStrictEqual(await page.evaluate(state), { hidden: true, sheet: false }, "phone");
+  await page.setViewport(1000, 900, false);
+  await page.waitFor("!document.getElementById('diskLibraryPanel').hidden", 5000, "library back on the desktop");
+  assert.deepStrictEqual(await page.evaluate(state), { hidden: false, sheet: false }, "desktop again");
   await page.close();
 });
 

@@ -39,7 +39,7 @@
   }
 
   function applyTheme(value) {
-    const theme = normalizeTheme(value) || "st";
+    const theme = normalizeTheme(value) || "classic";
     document.documentElement.dataset.uiTheme = theme;
     return theme;
   }
@@ -236,7 +236,7 @@
     }
 
     let layoutScheme = Object.prototype.hasOwnProperty.call(LAYOUT_SCHEMES, readPref(LAYOUT_SCHEME_KEY))
-      ? readPref(LAYOUT_SCHEME_KEY) : "emulation";
+      ? readPref(LAYOUT_SCHEME_KEY) : "work";
     let layoutColumnRatio = (function () {
       const value = Number(readPref(LAYOUT_RATIO_KEY));
       return value >= 0.2 && value <= 0.6 ? value : 0.34;
@@ -274,7 +274,7 @@
     }
 
     function applyLayoutScheme(value, persist) {
-      layoutScheme = Object.prototype.hasOwnProperty.call(LAYOUT_SCHEMES, value) ? value : "emulation";
+      layoutScheme = Object.prototype.hasOwnProperty.call(LAYOUT_SCHEMES, value) ? value : "work";
       if (persist) writePref(LAYOUT_SCHEME_KEY, layoutScheme);
       layoutRoot.dataset.layoutScheme = layoutScheme;
       layoutRoot.style.setProperty("--tools-column-width", (layoutColumnRatio * 100).toFixed(3) + "%");
@@ -438,8 +438,17 @@
       }
     }
 
+    // The layout decides which panels show only on a desktop-sized screen: when the viewport
+    // crosses the phone breakpoint (a rotated tablet, a narrowed window), apply it again, so
+    // the Work layout's library does not stay open as a full-screen sheet over the screen.
+    let lastMobileViewport = isMobileViewport();
     function onLayoutResize() {
-      if (!isMobileViewport()) setMobileToolsOpen(false);
+      const mobile = isMobileViewport();
+      if (!mobile) setMobileToolsOpen(false);
+      if (mobile !== lastMobileViewport) {
+        lastMobileViewport = mobile;
+        applyLayoutScheme(layoutScheme, false);
+      }
       resizeCrtCanvas();
     }
     window.addEventListener("resize", onLayoutResize);
