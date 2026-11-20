@@ -533,10 +533,11 @@ change can live there without tricks.
   Chrome; the user also checked it in a browser. Before the switch, Pages was set to
   "Deploy from a branch" and served `web_publish` as it is, without `build/out/` (the
   core answered 404).
-- **Open:** the push to `web_publish` (2026-11-20 00:10 UTC, together with `master`) did
-  not start the workflow; the run had to be started by hand. Probably the push arrived
-  before Pages was switched to "GitHub Actions", but that is not confirmed: check that
-  the next push starts it by itself.
+- **The first push did not start it:** the push to `web_publish` of 2026-11-20 00:10 UTC
+  (together with `master`) started no run, and the first one was started by hand. Most
+  likely the push arrived before Pages was switched to "GitHub Actions". **Resolved:** the
+  next push (`17c9c82`, 00:57 UTC, the new default theme and layout) started the workflow
+  by itself (`event: push`); it succeeded and the site serves the new defaults.
 - **Not verified:** remote sync from the `github.io` origin (needs option B CORS headers
   on the Nextcloud).
 
